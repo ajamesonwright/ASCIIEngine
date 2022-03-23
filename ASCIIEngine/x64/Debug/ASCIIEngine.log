@@ -1,0 +1,5 @@
+﻿  renderer.cpp
+D:\ASCIIEngine\ASCIIEngine\ASCIIEngine\renderer.cpp(84,68): warning C4311: 'type cast': pointer truncation from 'void *' to 'unsigned int'
+D:\ASCIIEngine\ASCIIEngine\ASCIIEngine\renderer.cpp(84,68): warning C4302: 'type cast': truncation from 'void *' to 'unsigned int'
+D:\ASCIIEngine\ASCIIEngine\ASCIIEngine\renderer.cpp(85): warning C4172: returning address of local variable or temporary: cursorMemoryLocation
+  ASCIIEngine.vcxproj -> D:\ASCIIEngine\ASCIIEngine\x64\Debug\ASCIIEngine.exe
