@@ -1,0 +1,7 @@
+.vs/*
+asciiengine/debug/*
+asciiengine/x64/*
+*vcxproj*
+*TODO.txt
+Debug/*
+x64/*

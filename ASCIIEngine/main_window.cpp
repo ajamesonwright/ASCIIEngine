@@ -2,8 +2,7 @@
 
 #include <string>
 #include "renderer.h"
-
-main_window* mw;
+#include "debug.h"
 
 // Window procedure
 LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_ LPARAM lParam) {
@@ -12,25 +11,37 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	case WM_CLOSE:
 	case WM_DESTROY:
 	{
-		mw->SetRunningState(STOPPED);
+		MW::SetRunningState(STOPPED);
 	} break;
 	case WM_MOVE:
 	{
 		// Re-establish rect objects for both main window and draw area
-		GetWindowRect(hwnd, &mw->GetMainWindowRect());
-		GetClientRect(hwnd, &mw->GetDrawRect());
-		// Re-calculate offset
-		mw->SetMTCOffsetX(((mw->GetMainWindowRect().right - mw->GetMainWindowRect().left) - (mw->GetDrawRect().right - mw->GetDrawRect().left)) / 2);
+		GetWindowRect(hwnd, &MW::GetMainWindowRect());
+		GetClientRect(hwnd, &MW::GetDrawRect());
+		MW::SetMTCOffsetX(((MW::GetMainWindowRect().right - MW::GetMainWindowRect().left) - (MW::GetDrawRect().right - MW::GetDrawRect().left)) / 2);
 
-		mw->GetRenderer().SetDrawArea(mw->GetDrawRect());
+		if (MW::GetRenderer())
+			MW::renderer->SetDrawArea(&MW::GetDrawRect());
 	}
 	case WM_SIZE:
 	{
 		RECT rect;
 		GetClientRect(hwnd, &rect);
 
-		mw->GetRenderer().SetDrawArea(rect);
+		if (!MW::GetRenderer())
+			MW::renderer = new Renderer(&rect);
+
+		if (MW::GetRenderer())
+			MW::renderer->SetDrawArea(&rect);
 	} break;
+	case WM_KEYDOWN:
+	{
+		switch (wParam) {
+		case (VK_END):
+			// allow debug message toggling
+			MW::print_debug_ = !MW::print_debug_;
+		}
+	}
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
@@ -38,10 +49,10 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 }
 
 static void CleanUp() {
-	mw->GetRenderer().CleanUp();
+	MW::GetRenderer()->CleanUp();
 }
 
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	const char caClassName[] = "ASCIIEngine";
 
 	// Generate window class
@@ -72,10 +83,10 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	MSG msg;
 	// Create window
 	//AdjustWindowRect(&main_rect, WS_OVERLAPPEDWINDOW | WS_VISIBLE, true);
-	hwnd = CreateWindow(wc.lpszClassName, L"ASCII Engine", WS_OVERLAPPEDWINDOW | WS_VISIBLE, mw->window_starting_x_, mw->window_starting_y_, mw->window_starting_width_, mw->window_starting_height_, 0, 0, hInstance, 0);
+	hwnd = CreateWindow(wc.lpszClassName, L"ASCII Engine", WS_OVERLAPPEDWINDOW | WS_VISIBLE, MW::window_starting_x_, MW::window_starting_y_, MW::window_starting_width_, MW::window_starting_height_, 0, 0, hInstance, 0);
 
 	if (hwnd == NULL) {
-		MessageBox(NULL, L"Window creation failed!", L"Error", MB_ICONEXCLAMATION | MB_OK);
+		MessageBox(NULL, L"Window creation unsuccessful", L"Error", MB_ICONEXCLAMATION | MB_OK);
 		return 0;
 	}
 
@@ -85,126 +96,124 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdL
 	// Get device context handle for later use
 	HDC hdc = GetDC(hwnd);
 	// Establish rendering state
-	mw->SetRunningState(RUNNING);
+	MW::SetRunningState(RUNNING);
 	// Find bounds of main window
-	GetWindowRect(hwnd, &mw->GetMainWindowRect());
+	GetWindowRect(hwnd, &MW::GetMainWindowRect());
 	// Find bounds of client window within main window
-	GetClientRect(hwnd, &mw->GetDrawRect());
+	GetClientRect(hwnd, &MW::GetDrawRect());
 	// Acquire renderer instance and apply draw rect dimensions
-	mw->GetRenderer().SetDrawArea(mw->GetDrawRect());
+	//*MW::renderer = Renderer(MW::GetDrawRect());
+	//MW::GetRenderer().SetDrawArea(MW::GetDrawRect());
 	// Calculate offsets between client window and main window
-	mw->SetMTCOffsetX(((mw->GetMainWindowRect().right - mw->GetMainWindowRect().left) - (mw->GetDrawRect().right - mw->GetDrawRect().left)) / 2);
-	//main_window::main_to_client_offset_y = ((main_window::main_rect.bottom - main_window::main_rect.top) - (main_window::draw_rect.right - main_window::draw_rect.left) - 30) / 2;
+	MW::SetMTCOffsetX(((MW::GetMainWindowRect().right - MW::GetMainWindowRect().left) - (MW::GetDrawRect().right - MW::GetDrawRect().left)) / 2);
+	//MW::main_to_client_offset_y = ((MW::main_rect.bottom - MW::main_rect.top) - (MW::draw_rect.right - MW::draw_rect.left) - 30) / 2;
 	
 	// Message loop
 	int counter = 0;
-	while (mw->GetRunningState()) {
+	while (MW::GetRunningState()) {
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
 			switch (msg.message)
 			{
-			case VK_ESCAPE:
-				mw->SetRunningState(STOPPED);
 			case WM_MOUSEMOVE:
 			{
 				POINT p;
 				// If cursor is moving (only valid if cursor is within window focus)
-				if (GetCursorPos(&p))
-				{
-					// condition mouse cursor coordinates to be within range
-					// 30 pixels is fixed for Y dimension
-					p.y -= (mw->GetMainWindowRect().top + 30);
-					p.x -= (mw->GetMainWindowRect().left + mw->GetMTCOffsetX());
+				if (GetCursorPos(&p)) {
 
-					// common debug information
-					if (main_window::print_debug_)
-					{
-						std::string mp = "main_window:\t" + std::to_string(counter++) + "\t Mouse: ( " + std::to_string(p.x) + ", " + std::to_string(p.y) + " ) \n";
-						std::wstring stemp = std::wstring(mp.begin(), mp.end());
-						LPCWSTR sw = stemp.c_str();
-						OutputDebugString(sw);
+					MW::ConditionMouse(p);
+					if (MW::print_debug_) {
+						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, counter++);
 					}
 
-					mw->GetRenderer().UpdateRenderArea(p);
+					MW::GetRenderer()->UpdateRenderArea(p);
 				}
-			}
+			} break;
 			case WM_MBUTTONDOWN:
-			{ }
+			{
+				POINT p;
+				if (GetCursorPos(&p)) {
+					MW::ConditionMouse(p);
+
+					if (MW::print_debug_)
+						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_MEMORY_LOCATION, p, counter, MW::GetRenderer()->GetMemoryLocation(p));
+				}
+			} break;
 			}
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		mw->GetRenderer().DrawRenderArea(hdc);
+		MW::GetRenderer()->DrawRenderArea(hdc);
 	}
 
 	CleanUp();
 	return 0;
 }
 
-Renderer& main_window::GetRenderer() {
-	return *renderer;
+Renderer* main_window::GetRenderer() {
+	return renderer;
 }
 
 bool main_window::GetRunningState() {
-	return main_window::run_state_;
+	return MW::run_state_;
 }
 
 void main_window::SetRunningState(int p_run_state) {
-	if (p_run_state == (int) mw->GetRunningState())
+	if (p_run_state == (int) MW::GetRunningState())
 	{
 		return;
 	}
 	if (p_run_state != 0 && p_run_state != 1) {
 		return;
 	}
-	main_window::run_state_ = p_run_state;
+	MW::run_state_ = p_run_state;
 }
 
-void main_window::SetWindowHeight(UINT height) {
-	this->window_height_ = height;
+void main_window::SetWindowHeight(uint16_t p_height) {
+	MW::window_height_ = p_height;
 }
 
-UINT main_window::GetWindowHeight() {
-	return this->window_height_;
+uint16_t main_window::GetWindowHeight() {
+	return MW::window_height_;
 }
 
-void main_window::SetWindowWidth(UINT width) {
-	this->window_width_ = width;
+void main_window::SetWindowWidth(uint16_t p_width) {
+	MW::window_width_ = p_width;
 }
 
-UINT main_window::GetWindowWidth() {
-	return this->window_width_;
+uint16_t main_window::GetWindowWidth() {
+	return MW::window_width_;
 }
 
-void main_window::SetWindowOffsetX(UINT offset) {
-	xPos_ = offset;
+void main_window::SetWindowOffsetX(uint16_t p_offset) {
+	MW::xPos_ = p_offset;
 }
 
-UINT main_window::GetWindowOffsetX() {
-	return this->xPos_;
+uint16_t main_window::GetWindowOffsetX() {
+	return MW::xPos_;
 }
 
-void main_window::SetWindowOffsetY(UINT offset) {
-	yPos_ = offset;
+void main_window::SetWindowOffsetY(uint16_t p_offset) {
+	yPos_ = p_offset;
 }
 
-UINT main_window::GetWindowOffsetY() {
-	return this->yPos_;
+uint16_t main_window::GetWindowOffsetY() {
+	return MW::yPos_;
 }
 
-void main_window::SetMTCOffsetX(UINT offset_x) {
-	this->main_to_client_offset_x = offset_x;
+void main_window::SetMTCOffsetX(uint8_t p_offset_x) {
+	MW::main_to_client_offset_x = p_offset_x;
 }
 
-UINT main_window::GetMTCOffsetX() {
-	return this->main_to_client_offset_x;
+uint8_t main_window::GetMTCOffsetX() {
+	return MW::main_to_client_offset_x;
 }
 
-void main_window::SetMTCOffsetY(UINT offset_y) {
-	this->main_to_client_offset_y = offset_y;
+void main_window::SetMTCOffsetY(uint8_t p_offset_y) {
+	MW::main_to_client_offset_y = p_offset_y;
 }
 
-UINT main_window::GetMTCOffsetY() {
-	return this->main_to_client_offset_y;
+uint8_t main_window::GetMTCOffsetY() {
+	return MW::main_to_client_offset_y;
 }
 
 RECT& main_window::GetMainWindowRect() {
@@ -213,4 +222,12 @@ RECT& main_window::GetMainWindowRect() {
 
 RECT& main_window::GetDrawRect() {
 	return draw_rect;
+}
+
+void main_window::ConditionMouse(POINT& p) {
+
+	// condition mouse cursor coordinates to be within range
+	// 30 pixels is fixed for Y dimension
+	p.y -= (MW::GetMainWindowRect().top + 30);
+	p.x -= (MW::GetMainWindowRect().left + MW::GetMTCOffsetX());
 }

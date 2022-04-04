@@ -2,11 +2,14 @@
 #define ASCIIENGINE_MAIN_WINDOW_H_
 
 #include <Windows.h>
+#include <stdint.h>
+
+// shorten name, make it easier to use
+#define MW main_window
 
 class Renderer;
 
-class main_window {
-	Renderer* renderer;
+namespace main_window {
 
 	int run_state_;
 
@@ -16,45 +19,46 @@ class main_window {
 	} input_;
 
 	// Window/exe properties
-public:
-	const UINT window_starting_height_ = 600;
-	const UINT window_starting_width_ = 800;
-	const UINT window_starting_x_ = 100;
-	const UINT window_starting_y_ = 200;
-private:
-	UINT window_height_ = 600;								// current client area height
-	UINT window_width_ = 800;								// current client area width
-	UINT xPos_ = 100;										// window top left x
-	UINT yPos_ = 200;										// window top left y
-	UINT main_to_client_offset_x, main_to_client_offset_y;
+	Renderer* renderer = nullptr;
+	const uint16_t window_starting_height_ = 600;
+	const uint16_t window_starting_width_ = 800;
+	const uint8_t window_starting_x_ = 100;
+	const uint8_t window_starting_y_ = 200;
+	const uint8_t panel_divider_width_ = 20;
+	uint16_t window_height_ = 600;								// current client area height
+	uint16_t window_width_ = 800;								// current client area width
+	uint16_t xPos_ = 100;										// window top left x
+	uint16_t yPos_ = 200;										// window top left y
+	uint8_t main_to_client_offset_x = 0;
+	uint8_t main_to_client_offset_y = 0;
 
 	RECT main_rect, draw_rect;
 
-public:
-	static const bool print_debug_ = true;
-
-	Renderer& GetRenderer();
+	static bool print_debug_ = false;
+	Renderer* GetRenderer();
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
-	
-	void SetWindowHeight(UINT height);
-	UINT GetWindowHeight();
-	void SetWindowWidth(UINT width);
-	UINT GetWindowWidth();
-	void SetWindowOffsetX(UINT offset);
-	UINT GetWindowOffsetX();
-	void SetWindowOffsetY(UINT offset);
-	UINT GetWindowOffsetY();
-	void SetMTCOffsetX(UINT offset_x);
-	UINT GetMTCOffsetX();
-	void SetMTCOffsetY(UINT offset_y);
-	UINT GetMTCOffsetY();
-	
+
+	void SetWindowHeight(uint16_t p_height);
+	uint16_t GetWindowHeight();
+	void SetWindowWidth(uint16_t p_width);
+	uint16_t GetWindowWidth();
+	void SetWindowOffsetX(uint16_t p_offset);
+	uint16_t GetWindowOffsetX();
+	void SetWindowOffsetY(uint16_t p_offset);
+	uint16_t GetWindowOffsetY();
+	void SetMTCOffsetX(uint8_t p_offset_x);
+	uint8_t GetMTCOffsetX();
+	void SetMTCOffsetY(uint8_t p_offset_y);
+	uint8_t GetMTCOffsetY();
+
 	RECT& GetMainWindowRect();
 	void SetMainWindowRect(RECT& rect);
 	RECT& GetDrawRect();
 	void SetDrawRect(RECT& rect);
+
+	void ConditionMouse(POINT& p);
 };
 
 enum {

@@ -1,9 +1,8 @@
 #include "renderer.h"
-#include <string>
 
-void Renderer::SetDrawArea(RECT& rect_inc)
-{
-	RECT rect = { rect_inc.left, rect_inc.top, rect_inc.right, rect_inc.bottom };
+void Renderer::SetDrawArea(RECT* rect_inc) {
+
+	RECT rect = { rect_inc->left, rect_inc->top, rect_inc->right, rect_inc->bottom };
 
 	/*
 	* draw_area_ is configured to operate in the space between
@@ -15,12 +14,12 @@ void Renderer::SetDrawArea(RECT& rect_inc)
 	draw_area_.width = rect.right - rect.left;
 	draw_area_.height = rect.bottom - rect.top;
 
-	data_size = (draw_area_.width * draw_area_.height) * sizeof(unsigned int);
+	unsigned int data_size = (draw_area_.width * draw_area_.height) * sizeof(unsigned int);
 
 	// Clear on resize when already full
 	if (draw_area_.data)
 		free(draw_area_.data);
-	draw_area_.data = malloc(data_size);
+	draw_area_.data = malloc(draw_area_.width * draw_area_.height * sizeof(unsigned int));
 
 	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
 	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
@@ -30,8 +29,8 @@ void Renderer::SetDrawArea(RECT& rect_inc)
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Renderer::UpdateRenderArea(POINT p_inc)
-{
+void Renderer::UpdateRenderArea(POINT p_inc) {
+
 	unsigned int colour;
 	colour = 0xFF0000;
 	// set pixel pointer to memory location associated with mouse position
@@ -44,19 +43,21 @@ void Renderer::UpdateRenderArea(POINT p_inc)
 		*pixel = colour;
 }
 
-void Renderer::DrawRenderArea(HDC hdc)
-{
+void Renderer::DrawRenderArea(HDC hdc) {
+
 	StretchDIBits(hdc, 0, 0, draw_area_.width, draw_area_.height, 0, 0, draw_area_.width, draw_area_.height, draw_area_.data, &draw_area_.bmi, DIB_RGB_COLORS, SRCCOPY);
 }
 
-void Renderer::CleanUp()
-{
-	free(draw_area_.data);
-	//delete draw_area_.data;
+void Renderer::CleanUp() {
+
+	if (!this)
+		return;
+	if (draw_area_.data)
+		free(draw_area_.data);
 }
 
-void Renderer::ClearBuffer(unsigned int colour)
-{
+void Renderer::ClearBuffer(unsigned int colour) {
+
 	// Starting from first element in data struct (corresponds to bottom left pixel), iterate and set all bits to same value
 	unsigned int* pixel = (unsigned int*)draw_area_.data;
 	for (int i = 0; i < draw_area_.height; i++)
@@ -68,8 +69,8 @@ void Renderer::ClearBuffer(unsigned int colour)
 	}
 }
 
-POINT Renderer::Clamp(POINT &p, POINT max)
-{
+POINT Renderer::Clamp(POINT &p, POINT max) {
+
 	if (p.x >= max.x)		p.x = max.x;
 	if (p.x < 0)			p.x = 0;
 	if (p.y >= max.y)		p.y = max.y;
@@ -78,10 +79,35 @@ POINT Renderer::Clamp(POINT &p, POINT max)
 	return p;
 }
 
-UINT* Renderer::GetMemoryLocation(POINT p)
-{
-	unsigned int cursorMemoryLocation = (unsigned int)draw_area_.data + p.x;
+UINT* Renderer::GetMemoryLocation(POINT p) {
+
+	unsigned int cursorMemoryLocation = (unsigned int)draw_area_.data + p.x + p.y * draw_area_.width;
 	return &cursorMemoryLocation;
+}
+
+Renderer::Renderer(RECT* rect_inc) {
+	RECT rect = { rect_inc->left, rect_inc->top, rect_inc->right, rect_inc->bottom };
+	/*
+	* draw_area_ is configured to initialize in the space between
+	* 784 wide and 561 tall, zero indexed.
+	* ie. { 0->783, 0->560 } are all valid coordinates
+	*/
+	draw_area_.xPos = (int)rect.left;
+	draw_area_.yPos = (int)rect.top;
+	draw_area_.width = (int)(rect.right - rect.left);
+	draw_area_.height = (int)(rect.bottom - rect.top);
+	
+	int data_size = (draw_area_.width * draw_area_.height * sizeof(int));
+
+	// Clear on resize when already full
+	draw_area_.data = malloc(data_size);
+
+	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
+	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
+	draw_area_.bmi.bmiHeader.biHeight = draw_area_.height;
+	draw_area_.bmi.bmiHeader.biPlanes = 1;
+	draw_area_.bmi.bmiHeader.biBitCount = 32;
+	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 }
 
 bool Renderer::Validate(POINT p)

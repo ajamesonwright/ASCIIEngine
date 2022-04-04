@@ -1,8 +1,0 @@
-1. create window
-2. create workspace
-	- double buffering?
-	- likely single color (white-black) to start to illustrate shape, form
-	- should be refreshed proportionally if window is resized
-
-3. add menu?
-4. 

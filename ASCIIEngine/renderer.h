@@ -10,22 +10,20 @@ class Renderer
 	struct DrawArea {
 		int xPos, yPos;
 		int width, height;
-		void* data;
+		void* data = nullptr;
 
 		BITMAPINFO bmi;
 	} draw_area_;
 
 public:
-	//Renderer(RECT &rect);
-	void SetDrawArea(RECT &rect);
+	void SetDrawArea(RECT* rect);
 	void UpdateRenderArea(POINT p);
 	void DrawRenderArea(HDC hdc);
 	void CleanUp();
 	UINT* GetMemoryLocation(POINT p);
+	Renderer(RECT* rect_inc);
 
 private:
-	unsigned int data_size;
-
 	void ClearBuffer(unsigned int colour);
 	POINT Clamp(POINT &p, POINT max);
 	bool Validate(POINT p);
