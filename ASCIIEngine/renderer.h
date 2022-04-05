@@ -19,12 +19,13 @@ public:
 	Renderer(Rect* rect_inc);
 
 	void SetDrawArea(Rect* rect);
-	void UpdateRenderArea(Point p_p, unsigned int colour = 0xFF0000);
-	void UpdateRenderArea(Line p_l, unsigned int colour = 0x000000);
-	void UpdateRenderArea(Rect p_r, unsigned int colour = 0x222222);
+	void UpdateRenderArea(Point p_p, unsigned int colour = 0xFF0000, bool valid = false);
+	void UpdateRenderArea(Line p_l, unsigned int colour = 0x000000, bool valid = false);
+	void UpdateRenderArea(Rect p_r, unsigned int colour = 0x222222, bool valid = false);
 	void DrawRenderArea(HDC hdc);
 	void ClearRenderArea(unsigned int colour = 0x555555);
 	void CleanUp();
+
 	UINT* GetMemoryLocation(POINT p);
 
 private:

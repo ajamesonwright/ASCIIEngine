@@ -33,53 +33,56 @@ void Renderer::SetDrawArea(Rect* rect_inc) {
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Renderer::UpdateRenderArea(Point p_p, unsigned int colour) {
+void Renderer::UpdateRenderArea(Point p_p, unsigned int colour, bool valid) {
 
 	// set pixel pointer to memory location associated with mouse position
-	// Draws from bottom to top as first memory location indicates bottom left corner
 	Point p;
 	p.x = p_p.x;
 	p.y = p_p.y;
-	if (!Validate(p))
-		return;
-		//Clamp(p, POINT{ draw_area_.width, draw_area_.height });
+	if (!valid)
+		if (!Validate(p))
+			return;
 
+	// Draws from bottom to top as first memory location indicates bottom left corner
 	unsigned int* pixel = (unsigned int*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 		*pixel = colour;
 }
 
-void Renderer::UpdateRenderArea(Line p_l, unsigned int colour) {
+void Renderer::UpdateRenderArea(Line p_l, unsigned int colour, bool valid) {
 	
-	if (!Validate(p_l))
-		// TODO: implement clip line instead of simple return
-		return;
+	if (!valid)
+		if (!Validate(p_l))
+			// TODO: implement clip line instead of simple return
+			return;
 
 	// for now, assuming that no rasterization is required, line is horizontal, and a is to the left of b
 	Point p = p_l.a;
 	for (int i = 0; i < (p_l.b.x - p_l.a.x); i++) {
-		UpdateRenderArea(p, colour);
+		// note: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
+		UpdateRenderArea(p, colour, true);
 		p.x++;
 	}
 }
 
-void Renderer::UpdateRenderArea(Rect p_rect, unsigned int colour) {
+void Renderer::UpdateRenderArea(Rect p_rect, unsigned int colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only
 	// objects represented as quads
-	if (!Validate(p_rect))
-		// TODO: implement clip line instead of simple return
-		return;
+	if (!valid)
+		if (!Validate(p_rect))
+			// TODO: implement clip line instead of simple return
+			return;
 
 	// for now, assuming that no rasterization is required, all lines are vertical or horizontal
 	Rect rect = p_rect;
 	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
 	Point p = { rect.left, rect.bottom };
-	for (int i = rect.left; i < rect.right; i++) {
-		for (int j = rect.top; j < rect.bottom; j++) {
-			UpdateRenderArea(p, colour);
+	for (int i = rect.bottom; i > rect.top; i--) {
+		for (int j = rect.left; j <= rect.right; j++) {
+			UpdateRenderArea(p, colour, true);
 			p.x++;
 		}
 		p.x = rect.left;
-		p.y++;
+		p.y--;
 	}
 }
 

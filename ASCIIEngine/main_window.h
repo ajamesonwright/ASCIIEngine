@@ -32,13 +32,15 @@ namespace main_window {
 	uint8_t main_to_client_offset_x = 0;
 	uint8_t main_to_client_offset_y = 0;
 
-	Rect main_rect, draw_rect;
+	Rect main_rect, draw_rect, divider_rect;
 
 	static bool print_debug_ = false;
 	Renderer* GetRenderer();
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
+
+	Rect& GetMouseFocus();
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
@@ -57,6 +59,8 @@ namespace main_window {
 	void SetMainWindowRect(HWND hwnd, Rect* rect);
 	Rect& GetDrawRect();
 	void SetDrawRect(HWND hwnd, Rect* rect);
+	Rect& GetDividerRect();
+	void SetDividerRect(Rect* rect);
 
 	void ConditionMouse(POINT& p);
 };

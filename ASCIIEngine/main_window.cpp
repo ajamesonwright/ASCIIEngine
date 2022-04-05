@@ -23,7 +23,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 		if (MW::GetRenderer())
 			MW::renderer->SetDrawArea(&MW::GetDrawRect());
-	}
+	} break;
 	case WM_SIZE:
 	{
 		// Re-establish rect objects for both main window and draw area
@@ -35,8 +35,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		MW::SetMTCOffsetX(((temp_mwr.right - temp_mwr.left) - (temp_dr.right - temp_dr.left)) / 2);
 		MW::SetMTCOffsetY(((temp_mwr.bottom - temp_mwr.top) - (temp_dr.bottom - temp_dr.top) - 31) / 2);
 
-		if (!MW::GetRenderer())
+		MW::SetDividerRect(&temp_dr);
+
+		if (!MW::GetRenderer()) {
 			MW::renderer = new Renderer(&temp_dr);
+		}
 
 		if (MW::GetRenderer())
 			MW::renderer->SetDrawArea(&temp_dr);
@@ -52,7 +55,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		case (VK_ESCAPE):
 		{
 			MW::SetRunningState(STOPPED);
-
 		} break;
 		default:
 		{
@@ -72,6 +74,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 static void CleanUp() {
 	MW::GetRenderer()->CleanUp();
+	delete MW::GetRenderer();
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -120,12 +123,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Establish rendering state
 	MW::SetRunningState(RUNNING);
 	// Find bounds of main window
-	MW::SetMainWindowRect(hwnd, &MW::GetMainWindowRect());
+	//MW::SetMainWindowRect(hwnd, &MW::GetMainWindowRect());
 	// Find bounds of client window within main window
-	MW::SetDrawRect(hwnd, &MW::GetDrawRect());
+	//MW::SetDrawRect(hwnd, &MW::GetDrawRect());
 	// Calculate offsets between client window and main window
 	Rect mwr = MW::GetMainWindowRect();
 	Rect dr = MW::GetDrawRect();
+	MW::SetDividerRect(&dr);
 	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
 	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 31) / 2);
 	
@@ -134,10 +138,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	while (MW::GetRunningState()) {
 		// Clear render area
 		MW::GetRenderer()->ClearRenderArea();
-		// Draw panel divider
-		Rect draw = MW::GetDrawRect();
-		Point centre = { (draw.left + draw.right) / 2, (draw.top + draw.bottom) / 2 };
-		MW::GetRenderer()->UpdateRenderArea(Rect{ (centre.x - MW::panel_divider_width_), (uint32_t)draw.top, (centre.x + MW::panel_divider_width_), (uint32_t)draw.bottom }, 0x000000);
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
 			POINT p;
 
@@ -153,8 +153,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, counter++);
 						POINT offset = POINT{ MW::GetMTCOffsetX(), MW::GetMTCOffsetY() };
 						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::WINDOW_OFFSET, offset, counter);
+						MW::GetRenderer()->UpdateRenderArea(Point(p));
 					}
-					//MW::GetRenderer()->UpdateRenderArea(p);
 				}
 			} break;
 			case WM_MBUTTONDOWN:
@@ -170,6 +170,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+		// Draw panel divider
+		MW::GetRenderer()->UpdateRenderArea(MW::GetDividerRect(), 0x000000, false);
 		// Draw updated RenderArea to screen
 		MW::GetRenderer()->DrawRenderArea(hdc);
 	}
@@ -195,6 +197,10 @@ void main_window::SetRunningState(int p_run_state) {
 		return;
 	}
 	MW::run_state_ = p_run_state;
+}
+
+Rect& main_window::GetMouseFocus() {
+	return draw_rect;
 }
 
 void main_window::SetWindowHeight(uint16_t p_height) {
@@ -269,11 +275,24 @@ void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 
 	RECT temp_dr;
 	GetClientRect(hwnd, &temp_dr);
+	//MW::draw_rect = temp_dr;
 	MW::draw_rect.left = temp_dr.left;
 	MW::draw_rect.top = temp_dr.top;
 	MW::draw_rect.right = temp_dr.right;
 	MW::draw_rect.bottom = temp_dr.bottom;
 	//GetClientRect(hwnd, &MW::GetDrawRect());
+}
+
+Rect& main_window::GetDividerRect() {
+	return divider_rect;
+}
+
+void main_window::SetDividerRect(Rect* rect) {
+	//Rect temp_divider = { (temp_dr.left + temp_dr.right - MW::panel_divider_width_) / 2, temp_dr.top, (temp_dr.left + temp_dr.right + MW::panel_divider_width_) / 2, temp_dr.bottom };
+	MW::divider_rect.left = (rect->left + rect->right - MW::panel_divider_width_) / 2;
+	MW::divider_rect.top = rect->top;
+	MW::divider_rect.right = (rect->left + rect->right + MW::panel_divider_width_) / 2;
+	MW::divider_rect.bottom = rect->bottom;
 }
 
 void main_window::ConditionMouse(POINT& p) {
