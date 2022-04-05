@@ -16,30 +16,52 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	case WM_MOVE:
 	{
 		// Re-establish rect objects for both main window and draw area
-		GetWindowRect(hwnd, &MW::GetMainWindowRect());
-		GetClientRect(hwnd, &MW::GetDrawRect());
-		MW::SetMTCOffsetX(((MW::GetMainWindowRect().right - MW::GetMainWindowRect().left) - (MW::GetDrawRect().right - MW::GetDrawRect().left)) / 2);
+		Rect temp_mwr = MW::GetMainWindowRect();
+		MW::SetMainWindowRect(hwnd, &temp_mwr);
+		Rect temp_dr = MW::GetDrawRect();
+		MW::SetDrawRect(hwnd, &temp_dr);
 
 		if (MW::GetRenderer())
 			MW::renderer->SetDrawArea(&MW::GetDrawRect());
 	}
 	case WM_SIZE:
 	{
-		RECT rect;
-		GetClientRect(hwnd, &rect);
+		// Re-establish rect objects for both main window and draw area
+		Rect temp_mwr = MW::GetMainWindowRect();
+		MW::SetMainWindowRect(hwnd, &temp_mwr);
+		Rect temp_dr = MW::GetDrawRect();
+		MW::SetDrawRect(hwnd, &temp_dr);
+		// Re-calculate offsets
+		MW::SetMTCOffsetX(((temp_mwr.right - temp_mwr.left) - (temp_dr.right - temp_dr.left)) / 2);
+		MW::SetMTCOffsetY(((temp_mwr.bottom - temp_mwr.top) - (temp_dr.bottom - temp_dr.top) - 31) / 2);
 
 		if (!MW::GetRenderer())
-			MW::renderer = new Renderer(&rect);
+			MW::renderer = new Renderer(&temp_dr);
 
 		if (MW::GetRenderer())
-			MW::renderer->SetDrawArea(&rect);
+			MW::renderer->SetDrawArea(&temp_dr);
 	} break;
 	case WM_KEYDOWN:
 	{
 		switch (wParam) {
 		case (VK_END):
+		{
 			// allow debug message toggling
 			MW::print_debug_ = !MW::print_debug_;
+		} break;
+		case (VK_ESCAPE):
+		{
+			MW::SetRunningState(STOPPED);
+
+		} break;
+		default:
+		{
+			Rect draw = MW::GetDrawRect();
+			Point centre = { (draw.left + draw.right) / 2, (draw.top + draw.bottom) / 2 };
+			int half_size = 10;
+			Line line = { Point { centre.x - half_size, centre.y}, Point { centre.x + half_size, centre.y } };
+			MW::renderer->UpdateRenderArea(line);
+		} break;
 		}
 	}
 	default:
@@ -98,39 +120,45 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Establish rendering state
 	MW::SetRunningState(RUNNING);
 	// Find bounds of main window
-	GetWindowRect(hwnd, &MW::GetMainWindowRect());
+	MW::SetMainWindowRect(hwnd, &MW::GetMainWindowRect());
 	// Find bounds of client window within main window
-	GetClientRect(hwnd, &MW::GetDrawRect());
-	// Acquire renderer instance and apply draw rect dimensions
-	//*MW::renderer = Renderer(MW::GetDrawRect());
-	//MW::GetRenderer().SetDrawArea(MW::GetDrawRect());
+	MW::SetDrawRect(hwnd, &MW::GetDrawRect());
 	// Calculate offsets between client window and main window
-	MW::SetMTCOffsetX(((MW::GetMainWindowRect().right - MW::GetMainWindowRect().left) - (MW::GetDrawRect().right - MW::GetDrawRect().left)) / 2);
-	//MW::main_to_client_offset_y = ((MW::main_rect.bottom - MW::main_rect.top) - (MW::draw_rect.right - MW::draw_rect.left) - 30) / 2;
+	Rect mwr = MW::GetMainWindowRect();
+	Rect dr = MW::GetDrawRect();
+	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
+	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 31) / 2);
 	
 	// Message loop
 	int counter = 0;
 	while (MW::GetRunningState()) {
+		// Clear render area
+		MW::GetRenderer()->ClearRenderArea();
+		// Draw panel divider
+		Rect draw = MW::GetDrawRect();
+		Point centre = { (draw.left + draw.right) / 2, (draw.top + draw.bottom) / 2 };
+		MW::GetRenderer()->UpdateRenderArea(Rect{ (centre.x - MW::panel_divider_width_), (uint32_t)draw.top, (centre.x + MW::panel_divider_width_), (uint32_t)draw.bottom }, 0x000000);
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
+			POINT p;
+
 			switch (msg.message)
 			{
 			case WM_MOUSEMOVE:
 			{
-				POINT p;
 				// If cursor is moving (only valid if cursor is within window focus)
 				if (GetCursorPos(&p)) {
 
 					MW::ConditionMouse(p);
 					if (MW::print_debug_) {
 						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, counter++);
+						POINT offset = POINT{ MW::GetMTCOffsetX(), MW::GetMTCOffsetY() };
+						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::WINDOW_OFFSET, offset, counter);
 					}
-
-					MW::GetRenderer()->UpdateRenderArea(p);
+					//MW::GetRenderer()->UpdateRenderArea(p);
 				}
 			} break;
 			case WM_MBUTTONDOWN:
 			{
-				POINT p;
 				if (GetCursorPos(&p)) {
 					MW::ConditionMouse(p);
 
@@ -142,6 +170,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+		// Draw updated RenderArea to screen
 		MW::GetRenderer()->DrawRenderArea(hdc);
 	}
 
@@ -216,12 +245,35 @@ uint8_t main_window::GetMTCOffsetY() {
 	return MW::main_to_client_offset_y;
 }
 
-RECT& main_window::GetMainWindowRect() {
+Rect& main_window::GetMainWindowRect() {
 	return main_rect;
 }
 
-RECT& main_window::GetDrawRect() {
+void main_window::SetMainWindowRect(HWND hwnd, Rect* rect) {
+
+	RECT temp_mwr;
+	GetWindowRect(hwnd, &temp_mwr);
+	MW::main_rect.left = temp_mwr.left;
+	MW::main_rect.top = temp_mwr.top;
+	MW::main_rect.right = temp_mwr.right;
+	MW::main_rect.bottom = temp_mwr.bottom;
+	//GetWindowRect(hwnd, &MW::GetMainWindowRect());
+}
+
+Rect& main_window::GetDrawRect() {
+	
 	return draw_rect;
+}
+
+void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
+
+	RECT temp_dr;
+	GetClientRect(hwnd, &temp_dr);
+	MW::draw_rect.left = temp_dr.left;
+	MW::draw_rect.top = temp_dr.top;
+	MW::draw_rect.right = temp_dr.right;
+	MW::draw_rect.bottom = temp_dr.bottom;
+	//GetClientRect(hwnd, &MW::GetDrawRect());
 }
 
 void main_window::ConditionMouse(POINT& p) {

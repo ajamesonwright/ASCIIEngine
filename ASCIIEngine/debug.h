@@ -14,7 +14,8 @@ enum calling_class {
 enum debug_type {
 	MOUSE_POSITION = 0,
 	MOUSE_MEMORY_LOCATION = 1,
-	DEBUG_SIZE = 2,
+	WINDOW_OFFSET = 2,
+	DEBUG_SIZE = 3,
 };
 
 namespace debug {

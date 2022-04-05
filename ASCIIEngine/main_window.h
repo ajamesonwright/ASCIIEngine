@@ -3,6 +3,8 @@
 
 #include <Windows.h>
 #include <stdint.h>
+#include "geometry.h"
+#include "input.h"
 
 // shorten name, make it easier to use
 #define MW main_window
@@ -11,17 +13,15 @@ class Renderer;
 
 namespace main_window {
 
+	// execution state
 	int run_state_;
 
-	struct Input {
-		int mouse_X = 0;
-		int mouse_Y = 0;
-	} input_;
+	Renderer* renderer = nullptr;
+	Input* input = nullptr;
 
 	// Window/exe properties
-	Renderer* renderer = nullptr;
 	const uint16_t window_starting_height_ = 600;
-	const uint16_t window_starting_width_ = 800;
+	const uint16_t window_starting_width_ = 1620;
 	const uint8_t window_starting_x_ = 100;
 	const uint8_t window_starting_y_ = 200;
 	const uint8_t panel_divider_width_ = 20;
@@ -32,7 +32,7 @@ namespace main_window {
 	uint8_t main_to_client_offset_x = 0;
 	uint8_t main_to_client_offset_y = 0;
 
-	RECT main_rect, draw_rect;
+	Rect main_rect, draw_rect;
 
 	static bool print_debug_ = false;
 	Renderer* GetRenderer();
@@ -53,10 +53,10 @@ namespace main_window {
 	void SetMTCOffsetY(uint8_t p_offset_y);
 	uint8_t GetMTCOffsetY();
 
-	RECT& GetMainWindowRect();
-	void SetMainWindowRect(RECT& rect);
-	RECT& GetDrawRect();
-	void SetDrawRect(RECT& rect);
+	Rect& GetMainWindowRect();
+	void SetMainWindowRect(HWND hwnd, Rect* rect);
+	Rect& GetDrawRect();
+	void SetDrawRect(HWND hwnd, Rect* rect);
 
 	void ConditionMouse(POINT& p);
 };

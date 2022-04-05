@@ -8,28 +8,33 @@
 class Renderer
 {
 	struct DrawArea {
-		int xPos, yPos;
-		int width, height;
+		uint32_t xPos = 0, yPos = 0;
+		uint32_t width = 0, height = 0;
 		void* data = nullptr;
 
 		BITMAPINFO bmi;
 	} draw_area_;
 
 public:
-	void SetDrawArea(RECT* rect);
-	void UpdateRenderArea(POINT p);
+	Renderer(Rect* rect_inc);
+
+	void SetDrawArea(Rect* rect);
+	void UpdateRenderArea(Point p_p, unsigned int colour = 0xFF0000);
+	void UpdateRenderArea(Line p_l, unsigned int colour = 0x000000);
+	void UpdateRenderArea(Rect p_r, unsigned int colour = 0x222222);
 	void DrawRenderArea(HDC hdc);
+	void ClearRenderArea(unsigned int colour = 0x555555);
 	void CleanUp();
 	UINT* GetMemoryLocation(POINT p);
-	Renderer(RECT* rect_inc);
 
 private:
-	void ClearBuffer(unsigned int colour);
-	POINT Clamp(POINT &p, POINT max);
-	bool Validate(POINT p);
-	void DrawPixel(POINT p, unsigned int colour);
-	void DrawLine(POINT p, std::vector<int> vec_3d, int weight, unsigned int colour);
-	void DrawLine(POINT p1, POINT p2, int weight, unsigned int colour);
+	Point Clamp(Point &p, Point max);
+	bool Validate(Point p);
+	bool Validate(Line l);
+	bool Validate(Rect rect);
+	void DrawPixel(Point p, unsigned int colour);
+	void DrawLine(Point p, std::vector<int> vec_3d, int weight, unsigned int colour);
+	void DrawLine(Point p1, Point p2, int weight, unsigned int colour);
 	Line ClipLine(Line l);
 };
 

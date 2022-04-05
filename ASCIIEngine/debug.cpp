@@ -1,7 +1,7 @@
 #include "debug.h"
 
 std::string calling_classes[calling_class::CLASS_SIZE] = { "main_window", "renderer", "geometry" };
-std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "mouse_memory_location" };
+std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "mouse_memory_location", "window_offset" };
 
 void debug::PrintDebug(int calling_class, int debug_type, POINT& p, int counter, UINT* memory_location) {
 	std::string mp;
@@ -14,6 +14,9 @@ void debug::PrintDebug(int calling_class, int debug_type, POINT& p, int counter,
 			mp = calling_classes[calling_class] + ":\t\t " + debug_types[debug_type] + ": (" + std::to_string(*memory_location) + ") \n";
 		else
 			mp = "Error detecting memory location of cursor.";
+	}
+	if (debug_type == WINDOW_OFFSET) {
+		mp = calling_classes[calling_class] + ":\t\t\t" + debug_types[debug_type] + ": (" + std::to_string(p.x) + ", " + std::to_string(p.y) + ") \n";
 	}
 	std::wstring stemp = std::wstring(mp.begin(), mp.end());
 	LPCWSTR sw = stemp.c_str();

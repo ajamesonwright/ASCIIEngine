@@ -1,8 +1,12 @@
 #include "renderer.h"
 
-void Renderer::SetDrawArea(RECT* rect_inc) {
+Renderer::Renderer(Rect* rect_inc) {
+	SetDrawArea(rect_inc);
+}
 
-	RECT rect = { rect_inc->left, rect_inc->top, rect_inc->right, rect_inc->bottom };
+void Renderer::SetDrawArea(Rect* rect_inc) {
+
+	Rect rect = *rect_inc;
 
 	/*
 	* draw_area_ is configured to operate in the space between
@@ -19,7 +23,7 @@ void Renderer::SetDrawArea(RECT* rect_inc) {
 	// Clear on resize when already full
 	if (draw_area_.data)
 		free(draw_area_.data);
-	draw_area_.data = malloc(draw_area_.width * draw_area_.height * sizeof(unsigned int));
+	draw_area_.data = malloc(data_size);
 
 	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
 	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
@@ -29,18 +33,54 @@ void Renderer::SetDrawArea(RECT* rect_inc) {
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Renderer::UpdateRenderArea(POINT p_inc) {
+void Renderer::UpdateRenderArea(Point p_p, unsigned int colour) {
 
-	unsigned int colour;
-	colour = 0xFF0000;
 	// set pixel pointer to memory location associated with mouse position
 	// Draws from bottom to top as first memory location indicates bottom left corner
-	POINT p;
-	p.x = p_inc.x;
-	p.y = p_inc.y;
-	Clamp(p, POINT{ draw_area_.width, draw_area_.height });
+	Point p;
+	p.x = p_p.x;
+	p.y = p_p.y;
+	if (!Validate(p))
+		return;
+		//Clamp(p, POINT{ draw_area_.width, draw_area_.height });
+
 	unsigned int* pixel = (unsigned int*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 		*pixel = colour;
+}
+
+void Renderer::UpdateRenderArea(Line p_l, unsigned int colour) {
+	
+	if (!Validate(p_l))
+		// TODO: implement clip line instead of simple return
+		return;
+
+	// for now, assuming that no rasterization is required, line is horizontal, and a is to the left of b
+	Point p = p_l.a;
+	for (int i = 0; i < (p_l.b.x - p_l.a.x); i++) {
+		UpdateRenderArea(p, colour);
+		p.x++;
+	}
+}
+
+void Renderer::UpdateRenderArea(Rect p_rect, unsigned int colour) {
+	// Used for drawing UI elements, since they will typically be the only
+	// objects represented as quads
+	if (!Validate(p_rect))
+		// TODO: implement clip line instead of simple return
+		return;
+
+	// for now, assuming that no rasterization is required, all lines are vertical or horizontal
+	Rect rect = p_rect;
+	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
+	Point p = { rect.left, rect.bottom };
+	for (int i = rect.left; i < rect.right; i++) {
+		for (int j = rect.top; j < rect.bottom; j++) {
+			UpdateRenderArea(p, colour);
+			p.x++;
+		}
+		p.x = rect.left;
+		p.y++;
+	}
 }
 
 void Renderer::DrawRenderArea(HDC hdc) {
@@ -56,7 +96,7 @@ void Renderer::CleanUp() {
 		free(draw_area_.data);
 }
 
-void Renderer::ClearBuffer(unsigned int colour) {
+void Renderer::ClearRenderArea(unsigned int colour) {
 
 	// Starting from first element in data struct (corresponds to bottom left pixel), iterate and set all bits to same value
 	unsigned int* pixel = (unsigned int*)draw_area_.data;
@@ -69,7 +109,7 @@ void Renderer::ClearBuffer(unsigned int colour) {
 	}
 }
 
-POINT Renderer::Clamp(POINT &p, POINT max) {
+Point Renderer::Clamp(Point &p, Point max) {
 
 	if (p.x >= max.x)		p.x = max.x;
 	if (p.x < 0)			p.x = 0;
@@ -85,48 +125,33 @@ UINT* Renderer::GetMemoryLocation(POINT p) {
 	return &cursorMemoryLocation;
 }
 
-Renderer::Renderer(RECT* rect_inc) {
-	RECT rect = { rect_inc->left, rect_inc->top, rect_inc->right, rect_inc->bottom };
-	/*
-	* draw_area_ is configured to initialize in the space between
-	* 784 wide and 561 tall, zero indexed.
-	* ie. { 0->783, 0->560 } are all valid coordinates
-	*/
-	draw_area_.xPos = (int)rect.left;
-	draw_area_.yPos = (int)rect.top;
-	draw_area_.width = (int)(rect.right - rect.left);
-	draw_area_.height = (int)(rect.bottom - rect.top);
-	
-	int data_size = (draw_area_.width * draw_area_.height * sizeof(int));
+bool Renderer::Validate(Point p) {
 
-	// Clear on resize when already full
-	draw_area_.data = malloc(data_size);
-
-	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
-	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
-	draw_area_.bmi.bmiHeader.biHeight = draw_area_.height;
-	draw_area_.bmi.bmiHeader.biPlanes = 1;
-	draw_area_.bmi.bmiHeader.biBitCount = 32;
-	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
+	return (p.x >= 0 &&	p.x <= draw_area_.width && p.y >= 0 && p.y <= draw_area_.height);
 }
 
-bool Renderer::Validate(POINT p)
-{
-	return (p.x < draw_area_.width && p.y < draw_area_.height);
+bool Renderer::Validate(Line l) {
+
+	return (Validate(l.a) && Validate(l.b));
 }
 
-void Renderer::DrawPixel(POINT p, unsigned int colour)
+bool Renderer::Validate(Rect rect) {
+
+	Line l = Line { Point { (uint16_t)rect.left, (uint16_t)rect.top }, Point { (uint16_t)rect.right, (uint16_t)rect.bottom } };
+	return (Validate(l.a) && Validate(l.b));
+}
+
+void Renderer::DrawPixel(Point p, unsigned int colour)
 {
-	if (!Validate(p))	return;
 	
 }
 
-void Renderer::DrawLine(POINT p, std::vector<int> vec_3d, int weight, unsigned int colour)
+void Renderer::DrawLine(Point p, std::vector<int> vec_3d, int weight, unsigned int colour)
 {
 
 }
 
-void Renderer::DrawLine(POINT p1, POINT p2, int weight, unsigned int colour)
+void Renderer::DrawLine(Point p1, Point p2, int weight, unsigned int colour)
 {
 	/*
 		Bresenham algorithm
@@ -152,10 +177,10 @@ void Renderer::DrawLine(POINT p1, POINT p2, int weight, unsigned int colour)
 
 	
 
-	POINT* min_y = nullptr;
-	POINT* min_x = nullptr;
-	POINT* max_y = nullptr;
-	POINT* max_x = nullptr;
+	Point* min_y = nullptr;
+	Point* min_x = nullptr;
+	Point* max_y = nullptr;
+	Point* max_x = nullptr;
 	
 	
 	if (p1.y < p2.y)
@@ -202,5 +227,5 @@ void Renderer::DrawLine(POINT p1, POINT p2, int weight, unsigned int colour)
 
 Line Renderer::ClipLine(Line l)
 {
-	return Line{ POINT {}, POINT {} };
+	return Line{ Point {}, Point {} };
 }
