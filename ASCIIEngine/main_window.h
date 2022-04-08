@@ -61,7 +61,7 @@ namespace main_window {
 	Rect& GetDrawRect();
 	void SetDrawRect(HWND hwnd, Rect* rect);
 
-	void ConditionMouse(Point& p);
+	void ConditionMouseCoords(Point& p);
 };
 
 enum {

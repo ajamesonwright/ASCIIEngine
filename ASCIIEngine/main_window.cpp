@@ -141,23 +141,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 3) / 2);
 	
 	// Clear background DrawArea
-	MW::GetRenderer()->ClearRenderArea(Renderer::BACKGROUND, 0x00FF00);
+	MW::GetRenderer()->ClearRenderArea(Renderer::BACKGROUND, 0x00FF00, true);
+	// Clear topdown and firstperson draw_area_ panels before re-draw
+	MW::GetRenderer()->ClearRenderArea(Renderer::TOP_DOWN, 0xFF0000, true);
+	MW::GetRenderer()->ClearRenderArea(Renderer::FIRST_PERSON, 0xFF, true);
 
 	// Message loop
 	while (MW::GetRunningState()) {
 		// Local variable to store mouse over location
 		int panel = 0;
 
-		// Clear topdown and firstperson draw_area_ panels before re-draw
-		MW::GetRenderer()->ClearRenderArea(Renderer::TOP_DOWN, 0xFF0000);
-		MW::GetRenderer()->ClearRenderArea(Renderer::FIRST_PERSON, 0xFF);
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
 			POINT mouse_pos;
 			Point p;
 			// If cursor is moving (only valid if cursor is within window focus)
 			if (GetCursorPos(&mouse_pos)) {
 				p = mouse_pos;
-				MW::ConditionMouse(p);
+				MW::ConditionMouseCoords(p);
 				panel = MW::GetMouseFocus(p);
 			}
 
@@ -185,9 +185,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			DispatchMessage(&msg);
 		}
 		// Draw updated RenderArea to screen
-		for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-			if (MW::GetRenderer()->draw_area_[i].update)
-				MW::GetRenderer()->DrawRenderArea(i, hdc);
+		for (int i = 0; i < Renderer::NUM_PANELS - 1; i++) {
+			MW::GetRenderer()->DrawRenderArea(i, hdc);
 		}
 	}
 
@@ -308,7 +307,7 @@ void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 	MW::draw_rect.bottom = temp_dr.bottom;*/
 }
 
-void main_window::ConditionMouse(Point& p) {
+void main_window::ConditionMouseCoords(Point& p) {
 	// likely needs to be updated to include panel detection
 
 

@@ -122,6 +122,9 @@ void Renderer::UpdateRenderArea(int panel, Rect p_rect, uint32_t colour, bool va
 
 void Renderer::DrawRenderArea(int panel, HDC hdc) {
 
+	if (!draw_area_[panel].update)
+		return;
+
 	// Draws selected DrawArea from top left to bottom right
 	StretchDIBits(hdc, draw_area_[panel].xPos, draw_area_[panel].yPos - draw_area_[panel].height, draw_area_[panel].width, draw_area_[panel].height, 0, 0, draw_area_[panel].width, draw_area_[panel].height, draw_area_[panel].data, &draw_area_[panel].bmi, DIB_RGB_COLORS, SRCCOPY);
 	draw_area_[panel].update = false;
@@ -137,10 +140,12 @@ void Renderer::CleanUp() {
 	}
 }
 
-void Renderer::ClearRenderArea(int panel, uint32_t colour) {
+void Renderer::ClearRenderArea(int panel, uint32_t colour, bool force) {
 
-	if (!draw_area_[panel].update)
-		return;
+	if (!force) {
+		if (!draw_area_[panel].update)
+			return;
+	}
 
 	DrawArea da;
 	AABB draw_areas[2];

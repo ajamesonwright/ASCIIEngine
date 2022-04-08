@@ -68,7 +68,7 @@ public:
 	void UpdateRenderArea(int panel, Line p_l, uint32_t colour = 0x666666, bool valid = false);
 	void UpdateRenderArea(int panel, Rect p_r, uint32_t colour = 0x333333, bool valid = false);
 	void DrawRenderArea(int panel, HDC hdc);
-	void ClearRenderArea(int panel, uint32_t colour = 0x000000);
+	void ClearRenderArea(int panel, uint32_t colour = 0x000000, bool force = false);
 	void CleanUp();
 
 	UINT* GetMemoryLocation(int panel, Point p);
