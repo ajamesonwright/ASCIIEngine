@@ -7,35 +7,78 @@
 
 class Renderer
 {
+public:
+	bool instanced = false;
+
+	enum panel {
+		TOP_DOWN,
+		FIRST_PERSON,
+		BACKGROUND,
+
+		NUM_PANELS,
+	};
+
 	struct DrawArea {
-		uint32_t xPos = 0, yPos = 0;
-		uint32_t width = 0, height = 0;
-		void* data = nullptr;
+		// Indexed from left-bottom
+		uint32_t xPos, yPos;
+		uint32_t width, height;
+		void* data;
+		bool update;
 
 		BITMAPINFO bmi;
-	} draw_area_;
+
+		DrawArea() { xPos = 0; yPos = 0; width = 0; height = 0; data = nullptr; };
+		DrawArea(uint32_t p_xPos, uint32_t p_yPos, uint32_t p_width, uint32_t p_height) {
+			xPos = p_xPos;
+			yPos = p_yPos;
+			width = p_width;
+			height = p_height;
+
+			uint32_t data_size = (width * height) * sizeof(uint32_t);
+			
+			data = malloc(data_size);
+
+			update = true;
+			
+			bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+			bmi.bmiHeader.biWidth = width;
+			bmi.bmiHeader.biHeight = height;
+			bmi.bmiHeader.biPlanes = 1;
+			bmi.bmiHeader.biBitCount = 32;
+			bmi.bmiHeader.biCompression = BI_RGB;
+		}
+
+		DrawArea& operator = (DrawArea const& obj) {
+			xPos = obj.xPos;
+			yPos = obj.yPos;
+			width = obj.width;
+			height = obj.height;
+			data = obj.data;
+			bmi = obj.bmi;
+			return *this;
+		}
+	};
+	
+	DrawArea draw_area_[NUM_PANELS];
 
 public:
-	Renderer(Rect* rect_inc);
-
-	void SetDrawArea(Rect* rect);
-	void UpdateRenderArea(Point p_p, unsigned int colour = 0xFF0000, bool valid = false);
-	void UpdateRenderArea(Line p_l, unsigned int colour = 0x000000, bool valid = false);
-	void UpdateRenderArea(Rect p_r, unsigned int colour = 0x222222, bool valid = false);
-	void DrawRenderArea(HDC hdc);
-	void ClearRenderArea(unsigned int colour = 0x555555);
+	Renderer(Rect* draw_rect, uint8_t border_width_);
+	void SetDrawArea(int panel, Rect* rect, uint8_t border_width);
+	void UpdateRenderArea(int panel, Point p_p, uint32_t colour = 0xFF0000, bool valid = false);
+	void UpdateRenderArea(int panel, Line p_l, uint32_t colour = 0x666666, bool valid = false);
+	void UpdateRenderArea(int panel, Rect p_r, uint32_t colour = 0x333333, bool valid = false);
+	void DrawRenderArea(int panel, HDC hdc);
+	void ClearRenderArea(int panel, uint32_t colour = 0x000000);
 	void CleanUp();
 
-	UINT* GetMemoryLocation(POINT p);
+	UINT* GetMemoryLocation(int panel, Point p);
 
 private:
 	Point Clamp(Point &p, Point max);
-	bool Validate(Point p);
-	bool Validate(Line l);
-	bool Validate(Rect rect);
-	void DrawPixel(Point p, unsigned int colour);
-	void DrawLine(Point p, std::vector<int> vec_3d, int weight, unsigned int colour);
-	void DrawLine(Point p1, Point p2, int weight, unsigned int colour);
+	bool Validate(int panel, Point p);
+	bool Validate(int panel, Line l);
+	bool Validate(int panel, Rect rect);
+	void DrawLine(Point p1, Point p2, int weight, uint32_t colour);
 	Line ClipLine(Line l);
 };
 

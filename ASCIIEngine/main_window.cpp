@@ -21,28 +21,37 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		Rect temp_dr = MW::GetDrawRect();
 		MW::SetDrawRect(hwnd, &temp_dr);
 
-		if (MW::GetRenderer())
-			MW::renderer->SetDrawArea(&MW::GetDrawRect());
+		if (MW::GetRenderer()) {
+			for (int i = 0; i < Renderer::NUM_PANELS; i++) {
+				MW::renderer->SetDrawArea(i, &MW::GetDrawRect(), MW::border_width_);
+			}
+		}
 	} break;
 	case WM_SIZE:
 	{
+		// should this be set and then get? main_rect and draw_rect appear to be 0 initialized at this point
 		// Re-establish rect objects for both main window and draw area
-		Rect temp_mwr = MW::GetMainWindowRect();
+		Rect& temp_mwr = MW::GetMainWindowRect();
 		MW::SetMainWindowRect(hwnd, &temp_mwr);
-		Rect temp_dr = MW::GetDrawRect();
+		Rect& temp_dr = MW::GetDrawRect();
 		MW::SetDrawRect(hwnd, &temp_dr);
 		// Re-calculate offsets
 		MW::SetMTCOffsetX(((temp_mwr.right - temp_mwr.left) - (temp_dr.right - temp_dr.left)) / 2);
 		MW::SetMTCOffsetY(((temp_mwr.bottom - temp_mwr.top) - (temp_dr.bottom - temp_dr.top) - 31) / 2);
 
-		MW::SetDividerRect(&temp_dr);
-
+		// executed once per program run
+		bool first_pass = false;
 		if (!MW::GetRenderer()) {
-			MW::renderer = new Renderer(&temp_dr);
+			MW::renderer = new Renderer(&temp_dr, MW::border_width_);
+			first_pass = true;
 		}
 
-		if (MW::GetRenderer())
-			MW::renderer->SetDrawArea(&temp_dr);
+
+		if (MW::GetRenderer() && !first_pass) {
+			for (int i = 0; i < Renderer::NUM_PANELS; i++) {
+				MW::renderer->SetDrawArea(i, &temp_dr, MW::border_width_);
+			}
+		}
 	} break;
 	case WM_KEYDOWN:
 	{
@@ -58,11 +67,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		} break;
 		default:
 		{
-			Rect draw = MW::GetDrawRect();
+		/*	Rect draw = MW::GetDrawRect();
 			Point centre = { (draw.left + draw.right) / 2, (draw.top + draw.bottom) / 2 };
 			int half_size = 10;
 			Line line = { Point { centre.x - half_size, centre.y}, Point { centre.x + half_size, centre.y } };
-			MW::renderer->UpdateRenderArea(line);
+			MW::renderer->UpdateRenderArea(line);*/
 		} break;
 		}
 	}
@@ -118,62 +127,68 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Display newly created window
 	ShowWindow(hwnd, nCmdShow);
 	UpdateWindow(hwnd);
+
 	// Get device context handle for later use
 	HDC hdc = GetDC(hwnd);
+
 	// Establish rendering state
 	MW::SetRunningState(RUNNING);
-	// Find bounds of main window
-	//MW::SetMainWindowRect(hwnd, &MW::GetMainWindowRect());
-	// Find bounds of client window within main window
-	//MW::SetDrawRect(hwnd, &MW::GetDrawRect());
+
 	// Calculate offsets between client window and main window
 	Rect mwr = MW::GetMainWindowRect();
 	Rect dr = MW::GetDrawRect();
-	MW::SetDividerRect(&dr);
 	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
-	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 31) / 2);
+	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 3) / 2);
 	
+	// Clear background DrawArea
+	MW::GetRenderer()->ClearRenderArea(Renderer::BACKGROUND, 0x00FF00);
+
 	// Message loop
-	int counter = 0;
 	while (MW::GetRunningState()) {
-		// Clear render area
-		MW::GetRenderer()->ClearRenderArea();
+		// Local variable to store mouse over location
+		int panel = 0;
+
+		// Clear topdown and firstperson draw_area_ panels before re-draw
+		MW::GetRenderer()->ClearRenderArea(Renderer::TOP_DOWN, 0xFF0000);
+		MW::GetRenderer()->ClearRenderArea(Renderer::FIRST_PERSON, 0xFF);
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
-			POINT p;
+			POINT mouse_pos;
+			Point p;
+			// If cursor is moving (only valid if cursor is within window focus)
+			if (GetCursorPos(&mouse_pos)) {
+				p = mouse_pos;
+				MW::ConditionMouse(p);
+				panel = MW::GetMouseFocus(p);
+			}
 
 			switch (msg.message)
 			{
 			case WM_MOUSEMOVE:
 			{
-				// If cursor is moving (only valid if cursor is within window focus)
-				if (GetCursorPos(&p)) {
-
-					MW::ConditionMouse(p);
-					if (MW::print_debug_) {
-						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, counter++);
-						POINT offset = POINT{ MW::GetMTCOffsetX(), MW::GetMTCOffsetY() };
-						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::WINDOW_OFFSET, offset, counter);
-						MW::GetRenderer()->UpdateRenderArea(Point(p));
-					}
+				if (MW::print_debug_) {
+					// Print counter iteration and mouse position
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, MW::counter++, nullptr, panel);
+					
+					// Print mouse over panel_id
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_ID, p, 0, nullptr, panel);
+					if (panel == 2)
+						MW::GetRenderer()->UpdateRenderArea(panel, p);
 				}
 			} break;
 			case WM_MBUTTONDOWN:
 			{
-				if (GetCursorPos(&p)) {
-					MW::ConditionMouse(p);
-
-					if (MW::print_debug_)
-						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_MEMORY_LOCATION, p, counter, MW::GetRenderer()->GetMemoryLocation(p));
-				}
+				if (MW::print_debug_)
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_MEMORY_LOCATION, p, 0, MW::GetRenderer()->GetMemoryLocation(panel, p));
 			} break;
 			}
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
-		// Draw panel divider
-		MW::GetRenderer()->UpdateRenderArea(MW::GetDividerRect(), 0x000000, false);
 		// Draw updated RenderArea to screen
-		MW::GetRenderer()->DrawRenderArea(hdc);
+		for (int i = 0; i < Renderer::NUM_PANELS; i++) {
+			if (MW::GetRenderer()->draw_area_[i].update)
+				MW::GetRenderer()->DrawRenderArea(i, hdc);
+		}
 	}
 
 	CleanUp();
@@ -199,8 +214,19 @@ void main_window::SetRunningState(int p_run_state) {
 	MW::run_state_ = p_run_state;
 }
 
-Rect& main_window::GetMouseFocus() {
-	return draw_rect;
+int main_window::GetMouseFocus(Point p) {
+
+	Renderer::DrawArea da;
+	Rect rect;
+	AABB aabb;
+	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
+		da = MW::GetRenderer()->draw_area_[i];
+		rect = Rect(da.xPos, da.yPos - da.height, da.xPos + da.width, da.yPos);
+		aabb = AABB(rect);
+		if (aabb.Collision(p))
+			return i;
+	}
+	return -1;
 }
 
 void main_window::SetWindowHeight(uint16_t p_height) {
@@ -257,13 +283,13 @@ Rect& main_window::GetMainWindowRect() {
 
 void main_window::SetMainWindowRect(HWND hwnd, Rect* rect) {
 
-	RECT temp_mwr;
-	GetWindowRect(hwnd, &temp_mwr);
-	MW::main_rect.left = temp_mwr.left;
+	RECT mwr;
+	GetWindowRect(hwnd, &mwr);
+	MW::main_rect = mwr;
+	/*MW::main_rect.left = temp_mwr.left;
 	MW::main_rect.top = temp_mwr.top;
 	MW::main_rect.right = temp_mwr.right;
-	MW::main_rect.bottom = temp_mwr.bottom;
-	//GetWindowRect(hwnd, &MW::GetMainWindowRect());
+	MW::main_rect.bottom = temp_mwr.bottom;*/
 }
 
 Rect& main_window::GetDrawRect() {
@@ -273,32 +299,21 @@ Rect& main_window::GetDrawRect() {
 
 void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 
-	RECT temp_dr;
-	GetClientRect(hwnd, &temp_dr);
-	//MW::draw_rect = temp_dr;
-	MW::draw_rect.left = temp_dr.left;
+	RECT dr;
+	GetClientRect(hwnd, &dr);
+	MW::draw_rect = dr;
+	/*MW::draw_rect.left = temp_dr.left;
 	MW::draw_rect.top = temp_dr.top;
 	MW::draw_rect.right = temp_dr.right;
-	MW::draw_rect.bottom = temp_dr.bottom;
-	//GetClientRect(hwnd, &MW::GetDrawRect());
+	MW::draw_rect.bottom = temp_dr.bottom;*/
 }
 
-Rect& main_window::GetDividerRect() {
-	return divider_rect;
-}
+void main_window::ConditionMouse(Point& p) {
+	// likely needs to be updated to include panel detection
 
-void main_window::SetDividerRect(Rect* rect) {
-	//Rect temp_divider = { (temp_dr.left + temp_dr.right - MW::panel_divider_width_) / 2, temp_dr.top, (temp_dr.left + temp_dr.right + MW::panel_divider_width_) / 2, temp_dr.bottom };
-	MW::divider_rect.left = (rect->left + rect->right - MW::panel_divider_width_) / 2;
-	MW::divider_rect.top = rect->top;
-	MW::divider_rect.right = (rect->left + rect->right + MW::panel_divider_width_) / 2;
-	MW::divider_rect.bottom = rect->bottom;
-}
-
-void main_window::ConditionMouse(POINT& p) {
 
 	// condition mouse cursor coordinates to be within range
-	// 30 pixels is fixed for Y dimension
+	// 30 pixels is fixed for Y dimension due to title bar
 	p.y -= (MW::GetMainWindowRect().top + 30);
 	p.x -= (MW::GetMainWindowRect().left + MW::GetMTCOffsetX());
 }

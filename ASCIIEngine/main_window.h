@@ -24,7 +24,7 @@ namespace main_window {
 	const uint16_t window_starting_width_ = 1620;
 	const uint8_t window_starting_x_ = 100;
 	const uint8_t window_starting_y_ = 200;
-	const uint8_t panel_divider_width_ = 20;
+	const uint8_t border_width_ = 20;
 	uint16_t window_height_ = 600;								// current client area height
 	uint16_t window_width_ = 800;								// current client area width
 	uint16_t xPos_ = 100;										// window top left x
@@ -32,15 +32,16 @@ namespace main_window {
 	uint8_t main_to_client_offset_x = 0;
 	uint8_t main_to_client_offset_y = 0;
 
-	Rect main_rect, draw_rect, divider_rect;
+	Rect main_rect, draw_rect;
 
+	static int counter = 0;
 	static bool print_debug_ = false;
 	Renderer* GetRenderer();
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
-	Rect& GetMouseFocus();
+	int GetMouseFocus(Point p);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
@@ -59,10 +60,8 @@ namespace main_window {
 	void SetMainWindowRect(HWND hwnd, Rect* rect);
 	Rect& GetDrawRect();
 	void SetDrawRect(HWND hwnd, Rect* rect);
-	Rect& GetDividerRect();
-	void SetDividerRect(Rect* rect);
 
-	void ConditionMouse(POINT& p);
+	void ConditionMouse(Point& p);
 };
 
 enum {

@@ -1,57 +1,88 @@
 #include "renderer.h"
 
-Renderer::Renderer(Rect* rect_inc) {
-	SetDrawArea(rect_inc);
+Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
+
+	if (instanced)
+		return;
+	instanced = true;
+
+	draw_area_[TOP_DOWN] = DrawArea(draw_rect->left + border_width, draw_rect->bottom - border_width, (draw_rect->left + draw_rect->right) / 2 - (2 * border_width), draw_rect->bottom - 2 * border_width);
+	draw_area_[FIRST_PERSON] = DrawArea((draw_rect->left + draw_rect->right) / 2 + border_width, draw_rect->bottom - border_width, (draw_rect->left + draw_rect->right) / 2 - (2 * border_width), draw_rect->bottom - 2 * border_width);
+	draw_area_[BACKGROUND] = DrawArea(draw_rect->left, draw_rect->bottom, draw_rect->right - draw_rect->left, draw_rect->bottom - draw_rect->top);
 }
 
-void Renderer::SetDrawArea(Rect* rect_inc) {
-
-	Rect rect = *rect_inc;
+void Renderer::SetDrawArea(int panel, Rect* rect_inc, uint8_t border_width) {
 
 	/*
-	* draw_area_ is configured to operate in the space between
-	* 784 wide and 561 tall, zero indexed.
-	* ie. { 0->783, 0->560 } are all valid coordinates
+	* Each draw_area_ object is configured for a specific range.
+	* draw_area_[BACKGROUND] is the entire range of the client rect { 1604, 561 } zero indexed.
+						(FUTURE OPTIMIZATION IS TO INCLUDE GUARDS IN THE UPDATE CALL FOR THIS PANEL TO LIMIT
+						 UPDATED PIXELS ONLY TO THOSE THAT ARE NOT ON TOP OF THE OTHER PANELS)
+	* draw_area_[TOP_DOWN] is the range from:		LT = (dr.left + BW, dr.top + BW)						BR = ((dr.left + dr.right) / 2 - BW, dr.bottom - BW)
+	* draw_area_[FIRST_PERSON] is the range from	LT = ((dr.left + dr.right) / 2 + BW, dr.bottom - BW)	BR = (dr.right - BW, dr.bottom - BW)
+	* Using WindowRect dimensions of 1620 by 800, yields total area of 1604W x 561H, zero indexed.
 	*/
-	draw_area_.xPos = rect.left;
-	draw_area_.yPos = rect.top;
-	draw_area_.width = rect.right - rect.left;
-	draw_area_.height = rect.bottom - rect.top;
+	Rect rect = *rect_inc;
 
-	unsigned int data_size = (draw_area_.width * draw_area_.height) * sizeof(unsigned int);
+	switch (panel) {
+	case TOP_DOWN:
+	{
+		draw_area_[panel].xPos = rect.left + border_width;
+		draw_area_[panel].yPos = rect.bottom - border_width;
+		draw_area_[panel].width = (rect.right - rect.left) / 2 - 2 * border_width;
+		draw_area_[panel].height = (rect.bottom - rect.top) - 2 * border_width;
+	} break;
+	case FIRST_PERSON:
+	{
+		draw_area_[panel].xPos = (rect.left + rect.right) / 2 + border_width;
+		draw_area_[panel].yPos = rect.bottom - border_width;
+		draw_area_[panel].width = (rect.right - rect.left) / 2 - 2 * border_width;
+		draw_area_[panel].height = (rect.bottom - rect.top) - 2 * border_width;
+	} break;
+	case BACKGROUND:
+	{
+		draw_area_[panel].xPos = rect.left;
+		draw_area_[panel].yPos = rect.bottom;
+		draw_area_[panel].width = rect.right - rect.left;
+		draw_area_[panel].height = rect.bottom - rect.top;
+	} break;
+	}
+
+	uint32_t data_size = (draw_area_[panel].width * draw_area_[panel].height) * sizeof(uint32_t);
+
+	draw_area_[panel].update = true;
 
 	// Clear on resize when already full
-	if (draw_area_.data)
-		free(draw_area_.data);
-	draw_area_.data = malloc(data_size);
+	if (draw_area_[panel].data)
+		free(draw_area_[panel].data);
+	draw_area_[panel].data = malloc(data_size);
 
-	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
-	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
-	draw_area_.bmi.bmiHeader.biHeight = draw_area_.height;
-	draw_area_.bmi.bmiHeader.biPlanes = 1;
-	draw_area_.bmi.bmiHeader.biBitCount = 32;
-	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
+	draw_area_[panel].bmi.bmiHeader.biSize = sizeof(draw_area_[panel].bmi.bmiHeader);
+	draw_area_[panel].bmi.bmiHeader.biWidth = draw_area_[panel].width;
+	draw_area_[panel].bmi.bmiHeader.biHeight = draw_area_[panel].height;
+	draw_area_[panel].bmi.bmiHeader.biPlanes = 1;
+	draw_area_[panel].bmi.bmiHeader.biBitCount = 32;
+	draw_area_[panel].bmi.bmiHeader.biCompression = BI_RGB;
 }
 
-void Renderer::UpdateRenderArea(Point p_p, unsigned int colour, bool valid) {
+void Renderer::UpdateRenderArea(int panel, Point p_p, uint32_t colour, bool valid) {
 
-	// set pixel pointer to memory location associated with mouse position
-	Point p;
-	p.x = p_p.x;
-	p.y = p_p.y;
+	Point p = p_p;
 	if (!valid)
-		if (!Validate(p))
+		if (!Validate(panel, p))
 			return;
 
-	// Draws from bottom to top as first memory location indicates bottom left corner
-	unsigned int* pixel = (unsigned int*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
+	// Draws from bottom left to top right as first memory location indicates bottom left corner
+	uint32_t* pixel = (uint32_t*)draw_area_[panel].data + (draw_area_[panel].width * draw_area_[panel].height) - (p.y * draw_area_[panel].width) + p.x;
 		*pixel = colour;
+	
+	draw_area_[panel].update = true;
 }
 
-void Renderer::UpdateRenderArea(Line p_l, unsigned int colour, bool valid) {
+void Renderer::UpdateRenderArea(int panel, Line p_l, uint32_t colour, bool valid) {
 	
 	if (!valid)
-		if (!Validate(p_l))
+		if (!Validate(panel, p_l))
 			// TODO: implement clip line instead of simple return
 			return;
 
@@ -59,16 +90,17 @@ void Renderer::UpdateRenderArea(Line p_l, unsigned int colour, bool valid) {
 	Point p = p_l.a;
 	for (int i = 0; i < (p_l.b.x - p_l.a.x); i++) {
 		// note: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
-		UpdateRenderArea(p, colour, true);
+		UpdateRenderArea(panel, p, colour, true);
 		p.x++;
 	}
+
+	draw_area_[panel].update = true;
 }
 
-void Renderer::UpdateRenderArea(Rect p_rect, unsigned int colour, bool valid) {
-	// Used for drawing UI elements, since they will typically be the only
-	// objects represented as quads
+void Renderer::UpdateRenderArea(int panel, Rect p_rect, uint32_t colour, bool valid) {
+	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
 	if (!valid)
-		if (!Validate(p_rect))
+		if (!Validate(panel, p_rect))
 			// TODO: implement clip line instead of simple return
 			return;
 
@@ -78,38 +110,66 @@ void Renderer::UpdateRenderArea(Rect p_rect, unsigned int colour, bool valid) {
 	Point p = { rect.left, rect.bottom };
 	for (int i = rect.bottom; i > rect.top; i--) {
 		for (int j = rect.left; j <= rect.right; j++) {
-			UpdateRenderArea(p, colour, true);
+			UpdateRenderArea(panel, p, colour, true);
 			p.x++;
 		}
 		p.x = rect.left;
 		p.y--;
 	}
+
+	draw_area_[panel].update = true;
 }
 
-void Renderer::DrawRenderArea(HDC hdc) {
+void Renderer::DrawRenderArea(int panel, HDC hdc) {
 
-	StretchDIBits(hdc, 0, 0, draw_area_.width, draw_area_.height, 0, 0, draw_area_.width, draw_area_.height, draw_area_.data, &draw_area_.bmi, DIB_RGB_COLORS, SRCCOPY);
+	// Draws selected DrawArea from top left to bottom right
+	StretchDIBits(hdc, draw_area_[panel].xPos, draw_area_[panel].yPos - draw_area_[panel].height, draw_area_[panel].width, draw_area_[panel].height, 0, 0, draw_area_[panel].width, draw_area_[panel].height, draw_area_[panel].data, &draw_area_[panel].bmi, DIB_RGB_COLORS, SRCCOPY);
+	draw_area_[panel].update = false;
 }
 
 void Renderer::CleanUp() {
 
 	if (!this)
 		return;
-	if (draw_area_.data)
-		free(draw_area_.data);
+	for (int i = 0; i < NUM_PANELS; i++) {
+		if (draw_area_[i].data)
+			free(draw_area_[i].data);
+	}
 }
 
-void Renderer::ClearRenderArea(unsigned int colour) {
+void Renderer::ClearRenderArea(int panel, uint32_t colour) {
 
+	if (!draw_area_[panel].update)
+		return;
+
+	DrawArea da;
+	AABB draw_areas[2];
+	if (panel == 2) {
+		// Create a collision area to detect when the current pixel is inside TOP_DOWN or FIRST_PERSON
+		for (int i = 0; i < NUM_PANELS - 1; i++) {
+			DrawArea da = draw_area_[i];
+			draw_areas[i] = AABB(Rect(da.xPos, da.yPos - da.height, da.xPos + da.width, da.yPos));
+		}
+	}
 	// Starting from first element in data struct (corresponds to bottom left pixel), iterate and set all bits to same value
-	unsigned int* pixel = (unsigned int*)draw_area_.data;
-	for (int i = 0; i < draw_area_.height; i++)
+	uint32_t* pixel = (uint32_t*)draw_area_[panel].data;
+	for (int i = 0; i < draw_area_[panel].height; i++)
 	{
-		for (int j = 0; j < draw_area_.width; j++)
+		for (int j = 0; j < draw_area_[panel].width; j++)
 		{
+			if (panel == 2) {
+				// check for collision between BACKGROUND AND TOP_DOWN or FIRST_PERSON and skip rendering of pixel
+				Point current_pixel = Point(j, i);
+				if (draw_areas[0].Collision(current_pixel) || draw_areas[1].Collision(current_pixel)) {
+					*pixel++;
+					continue;
+				}
+			}
 			*pixel++ = colour;
 		}
 	}
+
+	draw_area_[panel].update = true;
 }
 
 Point Renderer::Clamp(Point &p, Point max) {
@@ -122,39 +182,29 @@ Point Renderer::Clamp(Point &p, Point max) {
 	return p;
 }
 
-UINT* Renderer::GetMemoryLocation(POINT p) {
+uint32_t* Renderer::GetMemoryLocation(int panel, Point p) {
 
-	unsigned int cursorMemoryLocation = (unsigned int)draw_area_.data + p.x + p.y * draw_area_.width;
+	uint32_t cursorMemoryLocation = (uint32_t)draw_area_[panel].data + p.x + p.y * draw_area_[panel].width;
 	return &cursorMemoryLocation;
 }
 
-bool Renderer::Validate(Point p) {
+bool Renderer::Validate(int panel, Point p) {
 
-	return (p.x >= 0 &&	p.x <= draw_area_.width && p.y >= 0 && p.y <= draw_area_.height);
+	return (p.x >= 0 &&	p.x < draw_area_[panel].width && p.y >= 0 && p.y < draw_area_[panel].height);
 }
 
-bool Renderer::Validate(Line l) {
+bool Renderer::Validate(int panel, Line l) {
 
-	return (Validate(l.a) && Validate(l.b));
+	return (Validate(panel, l.a) && Validate(panel, l.b));
 }
 
-bool Renderer::Validate(Rect rect) {
+bool Renderer::Validate(int panel, Rect rect) {
 
 	Line l = Line { Point { (uint16_t)rect.left, (uint16_t)rect.top }, Point { (uint16_t)rect.right, (uint16_t)rect.bottom } };
-	return (Validate(l.a) && Validate(l.b));
+	return (Validate(panel, l.a) && Validate(panel, l.b));
 }
 
-void Renderer::DrawPixel(Point p, unsigned int colour)
-{
-	
-}
-
-void Renderer::DrawLine(Point p, std::vector<int> vec_3d, int weight, unsigned int colour)
-{
-
-}
-
-void Renderer::DrawLine(Point p1, Point p2, int weight, unsigned int colour)
+void Renderer::DrawLine(Point p1, Point p2, int weight, uint32_t colour)
 {
 	/*
 		Bresenham algorithm
@@ -172,7 +222,7 @@ void Renderer::DrawLine(Point p1, Point p2, int weight, unsigned int colour)
 		3 - (+, -)
 	*/
 	
-	if (!(Validate(p1) && Validate(p2)))
+	if (!(Validate(1, p1) && Validate(1, p2)))
 	{
 
 		ClipLine(Line{ p1, p2 });

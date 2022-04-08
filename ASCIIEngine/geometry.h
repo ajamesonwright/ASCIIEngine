@@ -12,10 +12,15 @@ struct Point {
 	Point(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; };
 
 	Point& operator = (Point const& obj) {
-		Point result;
-		result.x = obj.x;
-		result.y = obj.y;
-		return result;
+		x = obj.x;
+		y = obj.y;
+		return *this;
+	}
+
+	Point& operator = (POINT const& obj) {
+		x = obj.x;
+		y = obj.y;
+		return *this;
 	}
 };
 
@@ -26,10 +31,9 @@ struct Line {
 	Line(Point p_a, Point p_b) { a.x = p_a.x; a.y = p_a.y; b.x = p_b.x; b.y = p_b.y; };
 
 	Line& operator = (Line const& obj) {
-		Line result;
-		result.a = obj.a;
-		result.b = obj.b;
-		return result;
+		a = obj.a;
+		b = obj.b;
+		return *this;
 	}
 };
 
@@ -40,11 +44,10 @@ struct Tri {
 	Tri(Point p_a, Point p_b, Point p_c) { a = p_a; b = p_b; c = p_c; };
 
 	Tri& operator = (Tri const& obj) {
-		Tri result;
-		result.a = obj.a;
-		result.b = obj.b;
-		result.c = obj.c;
-		return result;
+		a = obj.a;
+		b = obj.b;
+		c = obj.c;
+		return *this;
 	}
 };
 
@@ -52,26 +55,28 @@ struct Rect{
 	uint32_t left, top, right, bottom;
 
 	Rect() { left = 0; top = 0; right = 0; bottom = 0; };
+	Rect(Point a, Point b) { left = min(a.x, b.x); top = min(a.y, b.y); right = max(a.x, b.x); bottom = max(a.y, b.y); };
 	Rect(RECT p_rect) { left = p_rect.left; top = p_rect.top; right = p_rect.right; bottom = p_rect.bottom; };
 	Rect(uint32_t p_left, uint32_t p_top, uint32_t p_right, uint32_t p_bottom) { left = p_left; top = p_top; right = p_right; bottom = p_bottom; };
 
-	Rect& operator = (Rect& obj) {
-		Rect result;
-		result.left = obj.left;
-		result.top = obj.top;
-		result.right = obj.right;
-		result.bottom = obj.bottom;
-		return result;
+	Rect& operator = (Rect const& obj) {
+		left = obj.left;
+		top = obj.top;
+		right = obj.right;
+		bottom = obj.bottom;
+		return *this;
 	}
 
 	Rect& operator = (RECT const& obj) {
-		Rect result;
-		result.left = obj.left;
-		result.top = obj.top;
-		result.right = obj.right;
-		result.bottom = obj.bottom;
-		return result;
+		left = obj.left;
+		top = obj.top;
+		right = obj.right;
+		bottom = obj.bottom;
+		return *this;
 	}
+
+	int GetWidth() { return this->right - this->left; };
+	int GetHeight() { return this->bottom - this->top; };
 };
 
 struct Quad {
@@ -81,6 +86,20 @@ struct Quad {
 struct Circle {
 	Point c;
 	uint16_t r = 0;
+};
+
+struct AABB {
+	Point LT, RB;
+
+	AABB() {};
+	AABB(Point p_a, Point p_b) { LT = p_a; RB = p_b; };
+	AABB(Rect rect) { LT = Point(rect.left, rect.top); RB = Point(rect.right, rect.bottom); };
+
+	bool Collision(Point p) {
+		if (p.x >= LT.x && p.x < RB.x && p.y >= LT.y && p.y < RB.y)
+			return true;
+		return false;
+	}
 };
 
 #endif
