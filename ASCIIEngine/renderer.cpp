@@ -6,63 +6,45 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 		return;
 	instanced = true;
 
-	draw_area_[TOP_DOWN] = DrawArea(draw_rect->left + border_width, draw_rect->bottom - border_width, (draw_rect->left + draw_rect->right) / 2 - (2 * border_width), draw_rect->bottom - 2 * border_width);
-	draw_area_[FIRST_PERSON] = DrawArea((draw_rect->left + draw_rect->right) / 2 + border_width, draw_rect->bottom - border_width, (draw_rect->left + draw_rect->right) / 2 - (2 * border_width), draw_rect->bottom - 2 * border_width);
-	draw_area_[BACKGROUND] = DrawArea(draw_rect->left, draw_rect->bottom, draw_rect->right - draw_rect->left, draw_rect->bottom - draw_rect->top);
+	draw_area_ = DrawArea();
 }
 
 void Renderer::SetDrawArea(int panel, Rect* rect_inc, uint8_t border_width) {
 
 	/*
-	* Each draw_area_ object is configured for a specific range.
-	* draw_area_[BACKGROUND] is the entire range of the client rect { 1604, 561 } zero indexed.
-						(FUTURE OPTIMIZATION IS TO INCLUDE GUARDS IN THE UPDATE CALL FOR THIS PANEL TO LIMIT
-						 UPDATED PIXELS ONLY TO THOSE THAT ARE NOT ON TOP OF THE OTHER PANELS)
-	* draw_area_[TOP_DOWN] is the range from:		LT = (dr.left + BW, dr.top + BW)						BR = ((dr.left + dr.right) / 2 - BW, dr.bottom - BW)
-	* draw_area_[FIRST_PERSON] is the range from	LT = ((dr.left + dr.right) / 2 + BW, dr.bottom - BW)	BR = (dr.right - BW, dr.bottom - BW)
+	* A draw_area_ object contains information regarding each panel that will be drawn to screen.
+	* draw_area_.aabb[BACKGROUND] is the entire range of the client rect { 1604, 561 } zero indexed.
+	* draw_area_.aabb[TOP_DOWN] is the range from:		LT = (dr.left + BW, dr.top + BW)						BR = ((dr.left + dr.right) / 2 - BW, dr.bottom - BW)
+	* draw_area_.aabb[FIRST_PERSON] is the range from	LT = ((dr.left + dr.right) / 2 + BW, dr.top + BW)		BR = (dr.right - BW, dr.bottom - BW)
 	* Using WindowRect dimensions of 1620 by 800, yields total area of 1604W x 561H, zero indexed.
 	*/
 	Rect rect = *rect_inc;
+	uint32_t data_size = 0;
 
-	switch (panel) {
-	case TOP_DOWN:
-	{
-		draw_area_[panel].xPos = rect.left + border_width;
-		draw_area_[panel].yPos = rect.bottom - border_width;
-		draw_area_[panel].width = (rect.right - rect.left) / 2 - 2 * border_width;
-		draw_area_[panel].height = (rect.bottom - rect.top) - 2 * border_width;
-	} break;
-	case FIRST_PERSON:
-	{
-		draw_area_[panel].xPos = (rect.left + rect.right) / 2 + border_width;
-		draw_area_[panel].yPos = rect.bottom - border_width;
-		draw_area_[panel].width = (rect.right - rect.left) / 2 - 2 * border_width;
-		draw_area_[panel].height = (rect.bottom - rect.top) - 2 * border_width;
-	} break;
-	case BACKGROUND:
-	{
-		draw_area_[panel].xPos = rect.left;
-		draw_area_[panel].yPos = rect.bottom;
-		draw_area_[panel].width = rect.right - rect.left;
-		draw_area_[panel].height = rect.bottom - rect.top;
-	} break;
-	}
+	draw_area_.xPos = rect.left;
+	draw_area_.yPos = rect.bottom;
+	draw_area_.width = rect.right - rect.left;
+	draw_area_.height = rect.bottom - rect.top;
 
-	uint32_t data_size = (draw_area_[panel].width * draw_area_[panel].height) * sizeof(uint32_t);
+	data_size = (draw_area_.width * draw_area_.height) * sizeof(uint32_t);
 
-	draw_area_[panel].update = true;
+	draw_area_.update = true;
 
 	// Clear on resize when already full
-	if (draw_area_[panel].data)
-		free(draw_area_[panel].data);
-	draw_area_[panel].data = malloc(data_size);
+	if (draw_area_.data)
+		free(draw_area_.data);
+	draw_area_.data = malloc(data_size);
 
-	draw_area_[panel].bmi.bmiHeader.biSize = sizeof(draw_area_[panel].bmi.bmiHeader);
-	draw_area_[panel].bmi.bmiHeader.biWidth = draw_area_[panel].width;
-	draw_area_[panel].bmi.bmiHeader.biHeight = draw_area_[panel].height;
-	draw_area_[panel].bmi.bmiHeader.biPlanes = 1;
-	draw_area_[panel].bmi.bmiHeader.biBitCount = 32;
-	draw_area_[panel].bmi.bmiHeader.biCompression = BI_RGB;
+	draw_area_.bmi.bmiHeader.biSize = sizeof(draw_area_.bmi.bmiHeader);
+	draw_area_.bmi.bmiHeader.biWidth = draw_area_.width;
+	draw_area_.bmi.bmiHeader.biHeight = draw_area_.height;
+	draw_area_.bmi.bmiHeader.biPlanes = 1;
+	draw_area_.bmi.bmiHeader.biBitCount = 32;
+	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
+
+	draw_area_.aabb[TOP_DOWN] = AABB(Point(rect.left + border_width, rect.top + border_width), Point((rect.left + rect.right) / 2 - border_width, rect.bottom - border_width));
+	draw_area_.aabb[FIRST_PERSON] = AABB(Point((rect.left + rect.right) / 2 + border_width, rect.top + border_width), Point(rect.right - border_width, rect.bottom - border_width));
+	draw_area_.aabb[BACKGROUND] = AABB(Point(rect.left, rect.top), Point(rect.right, rect.bottom));
 }
 
 void Renderer::UpdateRenderArea(int panel, Point p_p, uint32_t colour, bool valid) {
@@ -73,10 +55,10 @@ void Renderer::UpdateRenderArea(int panel, Point p_p, uint32_t colour, bool vali
 			return;
 
 	// Draws from bottom left to top right as first memory location indicates bottom left corner
-	uint32_t* pixel = (uint32_t*)draw_area_[panel].data + (draw_area_[panel].width * draw_area_[panel].height) - (p.y * draw_area_[panel].width) + p.x;
+	uint32_t* pixel = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 		*pixel = colour;
 	
-	draw_area_[panel].update = true;
+	draw_area_.update = true;
 }
 
 void Renderer::UpdateRenderArea(int panel, Line p_l, uint32_t colour, bool valid) {
@@ -94,7 +76,7 @@ void Renderer::UpdateRenderArea(int panel, Line p_l, uint32_t colour, bool valid
 		p.x++;
 	}
 
-	draw_area_[panel].update = true;
+	draw_area_.update = true;
 }
 
 void Renderer::UpdateRenderArea(int panel, Rect p_rect, uint32_t colour, bool valid) {
@@ -117,64 +99,106 @@ void Renderer::UpdateRenderArea(int panel, Rect p_rect, uint32_t colour, bool va
 		p.y--;
 	}
 
-	draw_area_[panel].update = true;
+	draw_area_.update = true;
 }
 
-void Renderer::DrawRenderArea(int panel, HDC hdc) {
+void Renderer::DrawRenderArea(HDC hdc) {
 
-	if (!draw_area_[panel].update)
+	if (!draw_area_.update)
 		return;
 
 	// Draws selected DrawArea from top left to bottom right
-	StretchDIBits(hdc, draw_area_[panel].xPos, draw_area_[panel].yPos - draw_area_[panel].height, draw_area_[panel].width, draw_area_[panel].height, 0, 0, draw_area_[panel].width, draw_area_[panel].height, draw_area_[panel].data, &draw_area_[panel].bmi, DIB_RGB_COLORS, SRCCOPY);
-	draw_area_[panel].update = false;
+	StretchDIBits(hdc, draw_area_.xPos, draw_area_.yPos - draw_area_.height, draw_area_.width, draw_area_.height, 0, 0, draw_area_.width, draw_area_.height, draw_area_.data, &draw_area_.bmi, DIB_RGB_COLORS, SRCCOPY);
+	draw_area_.update = false;
 }
 
 void Renderer::CleanUp() {
 
 	if (!this)
 		return;
-	for (int i = 0; i < NUM_PANELS; i++) {
-		if (draw_area_[i].data)
-			free(draw_area_[i].data);
-	}
+	if (draw_area_.data)
+		free(draw_area_.data);
 }
 
-void Renderer::ClearRenderArea(int panel, uint32_t colour, bool force) {
+void Renderer::ClearRenderArea(bool force, int panel) {
 
 	if (!force) {
-		if (!draw_area_[panel].update)
+		if (!draw_area_.update)
 			return;
 	}
 
-	DrawArea da;
-	AABB draw_areas[2];
-	if (panel == 2) {
-		// Create a collision area to detect when the current pixel is inside TOP_DOWN or FIRST_PERSON
-		for (int i = 0; i < NUM_PANELS - 1; i++) {
-			DrawArea da = draw_area_[i];
-			draw_areas[i] = AABB(Rect(da.xPos, da.yPos - da.height, da.xPos + da.width, da.yPos));
-		}
-	}
-	// Starting from first element in data struct (corresponds to bottom left pixel), iterate and set all bits to same value
-	uint32_t* pixel = (uint32_t*)draw_area_[panel].data;
-	for (int i = 0; i < draw_area_[panel].height; i++)
-	{
-		for (int j = 0; j < draw_area_[panel].width; j++)
-		{
-			if (panel == 2) {
-				// check for collision between BACKGROUND AND TOP_DOWN or FIRST_PERSON and skip rendering of pixel
-				Point current_pixel = Point(j, i);
-				if (draw_areas[0].Collision(current_pixel) || draw_areas[1].Collision(current_pixel)) {
-					*pixel++;
+	/* 
+	* Starting from first element in data struct (corresponds to bottom left pixel),
+	* iterate and set all bits to colour corresponding to panel in which they are located.
+	*/
+	uint32_t* pixel = (uint32_t*)draw_area_.data;
+	uint32_t colour;
+	uint16_t pixel_count, width;
+	Point current_pixel;
+
+	// draw entire buffer
+	if (panel == -1) {
+
+		for (int i = 0; i < draw_area_.height; i++) {
+			colour = bg_colour;
+			pixel_count = 0;
+			width = 0;
+			for (int j = 0; j < draw_area_.width; j++) {
+				if (pixel_count < width) {
+					pixel_count++;
+					*pixel++ = colour;
 					continue;
 				}
+				width = 0;
+
+				// once initial collision is found, set colour and track counter to determine how many subsequent pixels are required of the same colour
+				current_pixel = Point(j, draw_area_.height - i);
+				if (draw_area_.aabb[TOP_DOWN].Collision(current_pixel)) {
+					pixel_count = 0;
+					width = draw_area_.aabb[TOP_DOWN].RB.x - draw_area_.aabb[TOP_DOWN].LT.x;
+					colour = td_colour;
+					*pixel++ = colour;
+					continue;
+				}
+				if (draw_area_.aabb[FIRST_PERSON].Collision(current_pixel)) {
+					pixel_count = 0;
+					width = draw_area_.aabb[FIRST_PERSON].RB.x - draw_area_.aabb[FIRST_PERSON].LT.x;
+					colour = fp_colour;
+					*pixel++ = colour;
+					continue;
+				}
+				*pixel++ = bg_colour;
 			}
-			*pixel++ = colour;
+		}
+	}
+	// draw only the panel specified
+	else {
+		pixel += draw_area_.width * (draw_area_.aabb[BACKGROUND].RB.y - draw_area_.aabb[panel].RB.y) + (draw_area_.aabb[panel].LT.x - draw_area_.aabb[BACKGROUND].LT.x);
+
+		switch (panel) {
+		case TOP_DOWN:
+		{
+			colour = td_colour;
+		} break;
+		case FIRST_PERSON:
+		{
+			colour = fp_colour;
+		} break;
+		case BACKGROUND:
+		{
+			return;
+		}
+		}
+
+		for (int i = draw_area_.aabb[panel].LT.y; i < draw_area_.aabb[panel].RB.y; i++) {
+			for (int j = draw_area_.aabb[panel].LT.x; j < draw_area_.aabb[panel].RB.x; j++) {
+				*pixel++ = colour;
+			}
+			pixel += draw_area_.width;
 		}
 	}
 
-	draw_area_[panel].update = true;
+	draw_area_.update = true;
 }
 
 Point Renderer::Clamp(Point &p, Point max) {
@@ -189,13 +213,13 @@ Point Renderer::Clamp(Point &p, Point max) {
 
 uint32_t* Renderer::GetMemoryLocation(int panel, Point p) {
 
-	uint32_t cursorMemoryLocation = (uint32_t)draw_area_[panel].data + p.x + p.y * draw_area_[panel].width;
+	uint32_t cursorMemoryLocation = (uint32_t)draw_area_.data + p.x + p.y * draw_area_.width;
 	return &cursorMemoryLocation;
 }
 
 bool Renderer::Validate(int panel, Point p) {
 
-	return (p.x >= 0 &&	p.x < draw_area_[panel].width && p.y >= 0 && p.y < draw_area_[panel].height);
+	return (p.x >= 0 &&	p.x < draw_area_.width && p.y >= 0 && p.y < draw_area_.height);
 }
 
 bool Renderer::Validate(int panel, Line l) {

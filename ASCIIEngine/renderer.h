@@ -22,6 +22,7 @@ public:
 		// Indexed from left-bottom
 		uint32_t xPos, yPos;
 		uint32_t width, height;
+		AABB aabb[NUM_PANELS];
 		void* data;
 		bool update;
 
@@ -59,16 +60,18 @@ public:
 		}
 	};
 	
-	DrawArea draw_area_[NUM_PANELS];
+	DrawArea draw_area_;
 
 public:
+	const uint32_t td_colour = 0xFF0000, fp_colour = 0xFF, bg_colour = 0xFF00;
+
 	Renderer(Rect* draw_rect, uint8_t border_width_);
 	void SetDrawArea(int panel, Rect* rect, uint8_t border_width);
 	void UpdateRenderArea(int panel, Point p_p, uint32_t colour = 0xFF0000, bool valid = false);
 	void UpdateRenderArea(int panel, Line p_l, uint32_t colour = 0x666666, bool valid = false);
 	void UpdateRenderArea(int panel, Rect p_r, uint32_t colour = 0x333333, bool valid = false);
-	void DrawRenderArea(int panel, HDC hdc);
-	void ClearRenderArea(int panel, uint32_t colour = 0x000000, bool force = false);
+	void DrawRenderArea(HDC hdc);
+	void ClearRenderArea(bool force = false, int panel = -1);
 	void CleanUp();
 
 	UINT* GetMemoryLocation(int panel, Point p);

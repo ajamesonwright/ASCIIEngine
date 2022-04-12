@@ -140,11 +140,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
 	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 3) / 2);
 	
-	// Clear background DrawArea
-	MW::GetRenderer()->ClearRenderArea(Renderer::BACKGROUND, 0x00FF00, true);
+	// Clear DrawArea
+	MW::GetRenderer()->ClearRenderArea(true);
+	
 	// Clear topdown and firstperson draw_area_ panels before re-draw
-	MW::GetRenderer()->ClearRenderArea(Renderer::TOP_DOWN, 0xFF0000, true);
-	MW::GetRenderer()->ClearRenderArea(Renderer::FIRST_PERSON, 0xFF, true);
+	//MW::GetRenderer()->ClearRenderArea(Renderer::TOP_DOWN, 0xFF0000, true);
+	//MW::GetRenderer()->ClearRenderArea(Renderer::FIRST_PERSON, 0xFF, true);
 
 	// Message loop
 	while (MW::GetRunningState()) {
@@ -185,9 +186,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			DispatchMessage(&msg);
 		}
 		// Draw updated RenderArea to screen
-		for (int i = 0; i < Renderer::NUM_PANELS - 1; i++) {
-			MW::GetRenderer()->DrawRenderArea(i, hdc);
-		}
+		MW::GetRenderer()->DrawRenderArea(hdc);
 	}
 
 	CleanUp();
@@ -215,14 +214,8 @@ void main_window::SetRunningState(int p_run_state) {
 
 int main_window::GetMouseFocus(Point p) {
 
-	Renderer::DrawArea da;
-	Rect rect;
-	AABB aabb;
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-		da = MW::GetRenderer()->draw_area_[i];
-		rect = Rect(da.xPos, da.yPos - da.height, da.xPos + da.width, da.yPos);
-		aabb = AABB(rect);
-		if (aabb.Collision(p))
+		if (MW::GetRenderer()->draw_area_.aabb[i].Collision(p))
 			return i;
 	}
 	return -1;

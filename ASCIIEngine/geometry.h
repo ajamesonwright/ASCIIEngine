@@ -95,6 +95,12 @@ struct AABB {
 	AABB(Point p_a, Point p_b) { LT = p_a; RB = p_b; };
 	AABB(Rect rect) { LT = Point(rect.left, rect.top); RB = Point(rect.right, rect.bottom); };
 
+	AABB& operator = (Rect const& obj) {
+		LT = Point(obj.left, obj.top);
+		RB = Point(obj.right, obj.bottom);
+		return *this;
+	}
+
 	bool Collision(Point p) {
 		if (p.x >= LT.x && p.x < RB.x && p.y >= LT.y && p.y < RB.y)
 			return true;
