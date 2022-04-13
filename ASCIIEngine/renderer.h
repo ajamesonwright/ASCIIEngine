@@ -25,11 +25,11 @@ public:
 		AABB aabb[NUM_PANELS];
 		void* data;
 		bool update;
-		int focus;
+		int focus, lock_focus;
 
 		BITMAPINFO bmi;
 
-		DrawArea() { xPos = 0; yPos = 0; width = 0; height = 0; data = nullptr; focus = -1; };
+		DrawArea() { xPos = 0; yPos = 0; width = 0; height = 0; data = nullptr; focus = -1; lock_focus = -1; };
 		DrawArea(uint32_t p_xPos, uint32_t p_yPos, uint32_t p_width, uint32_t p_height) {
 			xPos = p_xPos;
 			yPos = p_yPos;
@@ -41,6 +41,7 @@ public:
 
 			update = true;
 			focus = -1;
+			lock_focus = -1;
 			
 			bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
 			bmi.bmiHeader.biWidth = width;
@@ -64,8 +65,8 @@ public:
 	DrawArea draw_area_;
 
 public:
-	const uint32_t td_colour_passive = 0x444444, fp_colour_passive = 0x444444, bg_colour_passive = 0x0;
-	const uint32_t td_colour_active = 0x222222, fp_colour_active = 0x222222, bg_colour_active = 0x0;
+	const uint32_t td_colour_passive = 0x0, fp_colour_passive = 0x0, bg_colour_passive = 0x444444;
+	const uint32_t td_colour_active = 0x111111, fp_colour_active = 0x111111, bg_colour_active = 0x444444;
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
 	void SetDrawArea(Rect* rect, uint8_t border_width);

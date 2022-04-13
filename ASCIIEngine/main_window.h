@@ -2,6 +2,7 @@
 #define ASCIIENGINE_MAIN_WINDOW_H_
 
 #include <Windows.h>
+#include <windowsx.h>
 #include <stdint.h>
 #include "geometry.h"
 #include "input.h"
@@ -15,6 +16,9 @@ namespace main_window {
 
 	// execution state
 	int run_state_;
+
+	// current mouseover panel
+	int current_panel;
 
 	Renderer* renderer = nullptr;
 	Input* input = nullptr;

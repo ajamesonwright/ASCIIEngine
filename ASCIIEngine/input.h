@@ -2,6 +2,8 @@
 #define ASCIIENGINE_INPUT_H_
 
 class Input {
+
+public:
 	enum {
 		ML_DOWN,
 		MM_DOWN,

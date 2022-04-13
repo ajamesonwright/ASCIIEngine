@@ -6,6 +6,7 @@
 
 // Window procedure
 LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_ LPARAM lParam) {
+	// WndProc will be used for handling window-related tasks (ie. move, close, resize)
 	switch (msg)
 	{
 	case WM_CLOSE:
@@ -24,7 +25,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::GetRenderer()) {
 			MW::renderer->SetDrawArea(&MW::GetDrawRect(), MW::border_width_);
 		}
-	} break;
+	}
 	case WM_SIZE:
 	{
 		// should this be set and then get? main_rect and draw_rect appear to be 0 initialized at this point
@@ -47,7 +48,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::GetRenderer() && !first_pass) {
 			MW::renderer->SetDrawArea(&temp_dr, MW::border_width_);
 		}
-	} break;
+	}
 	case WM_KEYDOWN:
 	{
 		switch (wParam) {
@@ -56,24 +57,13 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			// allow debug message toggling
 			MW::print_debug_ = !MW::print_debug_;
 		} break;
-		case (VK_ESCAPE):
-		{
-			MW::SetRunningState(STOPPED);
-		} break;
-		default:
-		{
-		/*	Rect draw = MW::GetDrawRect();
-			Point centre = { (draw.left + draw.right) / 2, (draw.top + draw.bottom) / 2 };
-			int half_size = 10;
-			Line line = { Point { centre.x - half_size, centre.y}, Point { centre.x + half_size, centre.y } };
-			MW::renderer->UpdateRenderArea(line);*/
-		} break;
+		
 		}
 	}
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
-	return 0;
+return 0;
 }
 
 static void CleanUp() {
@@ -134,42 +124,64 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	Rect dr = MW::GetDrawRect();
 	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
 	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 3) / 2);
-	
+
 	// Clear DrawArea
 	MW::GetRenderer()->ClearRenderArea(true);
-	
+
+	POINT mouse_pos;
+	Point p;
+
 	// Message loop
 	while (MW::GetRunningState()) {
 		// Local variable to store mouse over location
 		int panel = 0;
 
-		
-		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
-			POINT mouse_pos;
-			Point p;
-			// If cursor is moving (only valid if cursor is within window focus)
-			if (GetCursorPos(&mouse_pos)) {
-				p = mouse_pos;
-				MW::ConditionMouseCoords(p);
-				panel = MW::GetFocus(p);
-			}
+		// If cursor is moving (only valid if cursor is within window focus)
+		GetCursorPos(&mouse_pos);
+		p = mouse_pos;
+		MW::ConditionMouseCoords(p);
+		MW::GetRenderer()->SetFocus(-1);
+		if (MW::GetRenderer()->draw_area_.aabb[Renderer::BACKGROUND].Collision(p)) {
+			panel = MW::GetFocus(p);
 
-			switch (msg.message)
-			{
+			if (panel != MW::GetRenderer()->draw_area_.focus) {
+				MW::current_panel = panel;
+				MW::GetRenderer()->SetFocus(panel);
+			}
+		}
+
+		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
+
+			switch (msg.message) {
 			case WM_MOUSEMOVE:
 			{
 				if (MW::print_debug_) {
-					// Print counter iteration and mouse position
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, MW::counter++, nullptr, panel);
-					// Print mouse over panel_id
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_ID, p, 0, nullptr, panel);
-					//MW::GetRenderer()->UpdateRenderArea(panel, p);
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, MW::counter++, nullptr, panel, -1);
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_ID, p, 0, nullptr, panel, -1);
 				}
 			} break;
-			case WM_MBUTTONDOWN:
+			case WM_LBUTTONDOWN:
 			{
-				if (MW::print_debug_)
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_MEMORY_LOCATION, p, 0, MW::GetRenderer()->GetMemoryLocation(panel, p));
+				debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, p, 0, 0, MW::current_panel, msg.message, -1);
+				if (MW::GetRenderer()->draw_area_.lock_focus == -1) {
+					MW::GetRenderer()->draw_area_.lock_focus = panel;
+					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, p, 0, 0, MW::current_panel, msg.message, -1);
+				}
+			} break;
+			case WM_KEYDOWN:
+			{
+				switch (msg.wParam) {
+				case (VK_ESCAPE):
+				{
+					int locked = MW::GetRenderer()->draw_area_.lock_focus;
+					if (locked != -1) {
+						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, p, 0, 0, MW::current_panel, msg.message, locked);
+						MW::GetRenderer()->draw_area_.lock_focus = -1;
+						break;
+					}
+					MW::SetRunningState(STOPPED);
+				} break;
+				}
 			} break;
 			}
 			TranslateMessage(&msg);
@@ -207,11 +219,9 @@ int main_window::GetFocus(Point p) {
 
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
 		if (MW::GetRenderer()->draw_area_.aabb[i].Collision(p)) {
-			MW::GetRenderer()->SetFocus(i);
 			return i;
 		}
 	}
-	MW::GetRenderer()->SetFocus(-1);
 	return -1;
 }
 

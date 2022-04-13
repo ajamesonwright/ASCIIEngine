@@ -196,6 +196,8 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 }
 
 void Renderer::SetFocus(int panel) {
+	if (draw_area_.lock_focus)
+		return;
 	draw_area_.focus = panel;
 }
 
