@@ -9,7 +9,7 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	draw_area_ = DrawArea();
 }
 
-void Renderer::SetDrawArea(int panel, Rect* rect_inc, uint8_t border_width) {
+void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 
 	/*
 	* A draw_area_ object contains information regarding each panel that will be drawn to screen.
@@ -112,15 +112,7 @@ void Renderer::DrawRenderArea(HDC hdc) {
 	draw_area_.update = false;
 }
 
-void Renderer::CleanUp() {
-
-	if (!this)
-		return;
-	if (draw_area_.data)
-		free(draw_area_.data);
-}
-
-void Renderer::ClearRenderArea(bool force, int panel) {
+void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 
 	if (!force) {
 		if (!draw_area_.update)
@@ -132,18 +124,18 @@ void Renderer::ClearRenderArea(bool force, int panel) {
 	* iterate and set all bits to colour corresponding to panel in which they are located.
 	*/
 	uint32_t* pixel = (uint32_t*)draw_area_.data;
-	uint32_t colour;
+	uint32_t colour = bg_colour_passive;
 	uint16_t pixel_count, width;
 	Point current_pixel;
 
-	// draw entire buffer
+	// clear entire buffer
 	if (panel == -1) {
 
 		for (int i = 0; i < draw_area_.height; i++) {
-			colour = bg_colour;
 			pixel_count = 0;
 			width = 0;
 			for (int j = 0; j < draw_area_.width; j++) {
+				// iterate over known width of draw panel instead of verifying collision again
 				if (pixel_count < width) {
 					pixel_count++;
 					*pixel++ = colour;
@@ -156,33 +148,35 @@ void Renderer::ClearRenderArea(bool force, int panel) {
 				if (draw_area_.aabb[TOP_DOWN].Collision(current_pixel)) {
 					pixel_count = 0;
 					width = draw_area_.aabb[TOP_DOWN].RB.x - draw_area_.aabb[TOP_DOWN].LT.x;
-					colour = td_colour;
+					draw_area_.focus == panel ? colour = td_colour_active : colour = td_colour_passive;
 					*pixel++ = colour;
 					continue;
 				}
 				if (draw_area_.aabb[FIRST_PERSON].Collision(current_pixel)) {
 					pixel_count = 0;
 					width = draw_area_.aabb[FIRST_PERSON].RB.x - draw_area_.aabb[FIRST_PERSON].LT.x;
-					colour = fp_colour;
+					draw_area_.focus == panel ? colour = fp_colour_active : colour = fp_colour_passive;
 					*pixel++ = colour;
 					continue;
 				}
-				*pixel++ = bg_colour;
+				*pixel++ = bg_colour_passive;
 			}
 		}
 	}
-	// draw only the panel specified
+	// clear only the panel specified
 	else {
 		pixel += draw_area_.width * (draw_area_.aabb[BACKGROUND].RB.y - draw_area_.aabb[panel].RB.y) + (draw_area_.aabb[panel].LT.x - draw_area_.aabb[BACKGROUND].LT.x);
 
 		switch (panel) {
 		case TOP_DOWN:
 		{
-			colour = td_colour;
+			draw_area_.focus == panel ? colour = td_colour_active : colour = td_colour_passive;
+			colour = td_colour_passive;
 		} break;
 		case FIRST_PERSON:
 		{
-			colour = fp_colour;
+			draw_area_.focus == panel ? colour = fp_colour_active : colour = fp_colour_passive;
+			colour = fp_colour_passive;
 		} break;
 		case BACKGROUND:
 		{
@@ -190,15 +184,27 @@ void Renderer::ClearRenderArea(bool force, int panel) {
 		}
 		}
 
-		for (int i = draw_area_.aabb[panel].LT.y; i < draw_area_.aabb[panel].RB.y; i++) {
-			for (int j = draw_area_.aabb[panel].LT.x; j < draw_area_.aabb[panel].RB.x; j++) {
+		for (int i = 0; i < (draw_area_.aabb[panel].RB.y - draw_area_.aabb[panel].LT.y); i++) {
+			for (int j = 0; j < (draw_area_.aabb[panel].RB.x - draw_area_.aabb[panel].LT.x); j++) {
 				*pixel++ = colour;
 			}
-			pixel += draw_area_.width;
+			pixel += draw_area_.width - (draw_area_.aabb[panel].RB.x - draw_area_.aabb[panel].LT.x);
 		}
 	}
 
 	draw_area_.update = true;
+}
+
+void Renderer::SetFocus(int panel) {
+	draw_area_.focus = panel;
+}
+
+void Renderer::CleanUp() {
+
+	if (!this)
+		return;
+	if (draw_area_.data)
+		free(draw_area_.data);
 }
 
 Point Renderer::Clamp(Point &p, Point max) {

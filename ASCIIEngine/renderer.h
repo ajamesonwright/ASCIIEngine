@@ -25,10 +25,11 @@ public:
 		AABB aabb[NUM_PANELS];
 		void* data;
 		bool update;
+		int focus;
 
 		BITMAPINFO bmi;
 
-		DrawArea() { xPos = 0; yPos = 0; width = 0; height = 0; data = nullptr; };
+		DrawArea() { xPos = 0; yPos = 0; width = 0; height = 0; data = nullptr; focus = -1; };
 		DrawArea(uint32_t p_xPos, uint32_t p_yPos, uint32_t p_width, uint32_t p_height) {
 			xPos = p_xPos;
 			yPos = p_yPos;
@@ -36,10 +37,10 @@ public:
 			height = p_height;
 
 			uint32_t data_size = (width * height) * sizeof(uint32_t);
-			
 			data = malloc(data_size);
 
 			update = true;
+			focus = -1;
 			
 			bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
 			bmi.bmiHeader.biWidth = width;
@@ -63,15 +64,17 @@ public:
 	DrawArea draw_area_;
 
 public:
-	const uint32_t td_colour = 0xFF0000, fp_colour = 0xFF, bg_colour = 0xFF00;
+	const uint32_t td_colour_passive = 0x444444, fp_colour_passive = 0x444444, bg_colour_passive = 0x0;
+	const uint32_t td_colour_active = 0x222222, fp_colour_active = 0x222222, bg_colour_active = 0x0;
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
-	void SetDrawArea(int panel, Rect* rect, uint8_t border_width);
+	void SetDrawArea(Rect* rect, uint8_t border_width);
 	void UpdateRenderArea(int panel, Point p_p, uint32_t colour = 0xFF0000, bool valid = false);
 	void UpdateRenderArea(int panel, Line p_l, uint32_t colour = 0x666666, bool valid = false);
 	void UpdateRenderArea(int panel, Rect p_r, uint32_t colour = 0x333333, bool valid = false);
 	void DrawRenderArea(HDC hdc);
-	void ClearRenderArea(bool force = false, int panel = -1);
+	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
+	void SetFocus(int panel);
 	void CleanUp();
 
 	UINT* GetMemoryLocation(int panel, Point p);

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef ASCIIENGINE_INPUT_H_
+#define ASCIIENGINE_INPUT_H_
+
 class Input {
 	enum {
 		ML_DOWN,
@@ -19,3 +21,4 @@ class Input {
 	} input_;
 };
 
+#endif

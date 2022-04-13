@@ -41,7 +41,7 @@ namespace main_window {
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
-	int GetMouseFocus(Point p);
+	int GetFocus(Point p);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
