@@ -18,10 +18,10 @@ namespace main_window {
 	int run_state_;
 
 	// current mouseover panel
-	int current_panel;
+	int current_panel_;
 
-	Renderer* renderer = nullptr;
-	Input* input = nullptr;
+	Renderer* renderer_ = nullptr;
+	Input* input_ = nullptr;
 
 	// Window/exe properties
 	const uint16_t window_starting_height_ = 600;
@@ -33,19 +33,19 @@ namespace main_window {
 	uint16_t window_width_ = 800;								// current client area width
 	uint16_t xPos_ = 100;										// window top left x
 	uint16_t yPos_ = 200;										// window top left y
-	uint8_t main_to_client_offset_x = 0;
-	uint8_t main_to_client_offset_y = 0;
+	uint8_t main_to_client_offset_x_ = 0;
+	uint8_t main_to_client_offset_y_ = 0;
 
 	Rect main_rect, draw_rect;
 
-	static int counter = 0;
+	static int counter_ = 0;
 	static bool print_debug_ = false;
 	Renderer* GetRenderer();
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
-	int GetFocus(Point p);
+	int GetCursorFocus(Point p);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();

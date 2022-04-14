@@ -64,9 +64,9 @@ public:
 	
 	DrawArea draw_area_;
 
-public:
+	//const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
 	const uint32_t td_colour_passive = 0x0, fp_colour_passive = 0x0, bg_colour_passive = 0x444444;
-	const uint32_t td_colour_active = 0x111111, fp_colour_active = 0x111111, bg_colour_active = 0x444444;
+	const uint32_t td_colour_active = 0x111111, fp_colour_active = 0x111133, bg_colour_active = 0x444444;
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
 	void SetDrawArea(Rect* rect, uint8_t border_width);
@@ -75,7 +75,11 @@ public:
 	void UpdateRenderArea(int panel, Rect p_r, uint32_t colour = 0x333333, bool valid = false);
 	void DrawRenderArea(HDC hdc);
 	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
+	int Collision(Point p, int panel = -1);
+	int GetFocus();
 	void SetFocus(int panel);
+	int GetFocusLock();
+	void SetFocusLock(int panel);
 	void CleanUp();
 
 	UINT* GetMemoryLocation(int panel, Point p);

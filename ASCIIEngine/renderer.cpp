@@ -143,19 +143,28 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 				}
 				width = 0;
 
-				// once initial collision is found, set colour and track counter to determine how many subsequent pixels are required of the same colour
 				current_pixel = Point(j, draw_area_.height - i);
 				if (draw_area_.aabb[TOP_DOWN].Collision(current_pixel)) {
+					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
 					width = draw_area_.aabb[TOP_DOWN].RB.x - draw_area_.aabb[TOP_DOWN].LT.x;
-					draw_area_.focus == panel ? colour = td_colour_active : colour = td_colour_passive;
+					// set colour depending on cursor location and whether the panel focus has been locked
+					colour = td_colour_passive;
+					if (draw_area_.lock_focus == TOP_DOWN || (draw_area_.focus == TOP_DOWN && draw_area_.lock_focus == -1)) {
+						colour = td_colour_active;
+					}
 					*pixel++ = colour;
 					continue;
 				}
 				if (draw_area_.aabb[FIRST_PERSON].Collision(current_pixel)) {
+					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
 					width = draw_area_.aabb[FIRST_PERSON].RB.x - draw_area_.aabb[FIRST_PERSON].LT.x;
-					draw_area_.focus == panel ? colour = fp_colour_active : colour = fp_colour_passive;
+					// set colour depending on cursor location and whether the panel focus has been locked
+					colour = fp_colour_passive;
+					if (draw_area_.lock_focus == FIRST_PERSON || (draw_area_.focus == FIRST_PERSON && draw_area_.lock_focus == -1)) {
+						colour = fp_colour_active;
+					}
 					*pixel++ = colour;
 					continue;
 				}
@@ -195,10 +204,46 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	draw_area_.update = true;
 }
 
+int Renderer::GetFocus() {
+
+	return draw_area_.focus;
+}
+
+int Renderer::Collision(Point p, int panel) {
+	// check all panels
+	if (panel == -1) {
+		for (int i = 0; i < NUM_PANELS; i++) {
+			if (draw_area_.aabb[i].Collision(p))
+				return i;
+		}
+		return -1;
+	}
+
+	if (draw_area_.aabb[panel].Collision(p))
+		return panel;
+}
+
 void Renderer::SetFocus(int panel) {
-	if (draw_area_.lock_focus)
+
+	if (draw_area_.lock_focus != -1)
 		return;
 	draw_area_.focus = panel;
+	draw_area_.update = true;
+}
+
+int Renderer::GetFocusLock() {
+
+	return draw_area_.lock_focus;
+}
+
+void Renderer::SetFocusLock(int panel) {
+
+	draw_area_.update = true;
+	if (draw_area_.lock_focus == -1) {
+		draw_area_.lock_focus = panel;
+		return;
+	}
+	draw_area_.lock_focus = -1;
 }
 
 void Renderer::CleanUp() {
