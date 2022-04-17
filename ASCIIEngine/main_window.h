@@ -38,8 +38,8 @@ namespace main_window {
 
 	Rect main_rect, draw_rect;
 
-	static int counter_ = 0;
-	static bool print_debug_ = false;
+	MSG event_message;
+
 	Renderer* GetRenderer();
 
 	bool GetRunningState();
@@ -66,6 +66,7 @@ namespace main_window {
 	void SetDrawRect(HWND hwnd, Rect* rect);
 
 	void ConditionMouseCoords(Point& p);
+	void ConditionMouseCoords(POINT& p);
 };
 
 enum {

@@ -55,11 +55,33 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		case (VK_END):
 		{
 			// allow debug message toggling
-			MW::print_debug_ = !MW::print_debug_;
+			debug::ToggleDebugPrinting();
 		} break;
-		
+		case (VK_ESCAPE):
+		{
+			int locked = MW::GetRenderer()->GetFocusLock();
+			if (locked != -1) {
+				debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, &MW::event_message, MW::current_panel_, locked);
+				MW::GetRenderer()->SetFocusLock(-1);
+				break;
+			}
+			MW::SetRunningState(STOPPED);
+		} break;
 		}
 	}
+	case WM_MOUSEMOVE:
+	{
+		debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, &MW::event_message, MW::current_panel_);
+	} break;
+	case WM_LBUTTONDOWN:
+	{
+		debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_);
+
+		if (MW::GetRenderer()->GetFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
+			MW::GetRenderer()->SetFocusLock(MW::current_panel_);
+			debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, &MW::event_message, MW::current_panel_);
+		}
+	} break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
@@ -128,67 +150,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Clear DrawArea
 	MW::GetRenderer()->ClearRenderArea(true);
 
-	POINT mouse_pos;
-	Point p;
-
 	// Message loop
 	while (MW::GetRunningState()) {
-		// Local variable to store mouse over location
-		int panel = 0;
-
-		// Collect cursor data
-		GetCursorPos(&mouse_pos);
-		p = mouse_pos;
-		MW::ConditionMouseCoords(p);
-		// Compare cursor coordinates to determine if cursor is over window
-		//draw_area_.aabb[Renderer::BACKGROUND].Collision(p)
-		if (MW::GetRenderer()->Collision(p, Renderer::BACKGROUND)) {
-			panel = MW::GetCursorFocus(p);
-
-			if (panel != MW::GetRenderer()->GetFocus()) {
-				MW::current_panel_ = panel;
-				MW::GetRenderer()->SetFocus(panel);
-			}
-		}
-
 		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
+			// Collect cursor data
+			MW::event_message = msg;
 
-			switch (msg.message) {
-			case WM_MOUSEMOVE:
-			{
-				if (MW::print_debug_) {
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, p, MW::counter_++, nullptr, panel, -1);
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_ID, p, 0, nullptr, panel, -1);
-				}
-			} break;
-			case WM_LBUTTONDOWN:
-			{
-				if (MW::print_debug_)
-					debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, p, 0, 0, MW::current_panel_, msg.message, -1);
-
-				if (MW::GetRenderer()->GetFocusLock() == -1 && panel != Renderer::BACKGROUND) {
-					MW::GetRenderer()->SetFocusLock(panel);
-
-					if (MW::print_debug_)
-						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, p, 0, 0, MW::current_panel_, msg.message, -1);
-				}
-			} break;
-			case WM_KEYDOWN:
-			{
-				switch (msg.wParam) {
-				case (VK_ESCAPE):
-				{
-					int locked = MW::GetRenderer()->GetFocusLock();
-					if (locked != -1) {
-						debug::PrintDebug(calling_class::MAIN_WINDOW, debug_type::PANEL_LOCK, p, 0, 0, MW::current_panel_, msg.message, locked);
-						MW::GetRenderer()->SetFocusLock(-1);
-						break;
-					}
-					MW::SetRunningState(STOPPED);
-				} break;
-				}
-			} break;
-			}
+			MW::ConditionMouseCoords(MW::event_message.pt);
+			MW::current_panel_ = MW::GetCursorFocus((Point)MW::event_message.pt);
+			if (MW::current_panel_ != MW::GetRenderer()->GetFocus())
+				MW::GetRenderer()->SetFocus(MW::current_panel_);
+			
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
@@ -310,6 +282,15 @@ void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 }
 
 void main_window::ConditionMouseCoords(Point& p) {
+	// likely needs to be updated to include panel detection
+
+	// condition mouse cursor coordinates to be within range
+	// 30 pixels is fixed for Y dimension due to title bar
+	p.y -= (MW::GetMainWindowRect().top + 31);
+	p.x -= (MW::GetMainWindowRect().left + MW::GetMTCOffsetX());
+}
+
+void main_window::ConditionMouseCoords(POINT& p) {
 	// likely needs to be updated to include panel detection
 
 	// condition mouse cursor coordinates to be within range
