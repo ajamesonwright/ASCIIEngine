@@ -9,6 +9,10 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	draw_area_ = DrawArea();
 }
 
+Renderer::DrawArea* Renderer::GetDrawArea() {
+	return &draw_area_;
+}
+
 void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 
 	/*

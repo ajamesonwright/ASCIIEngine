@@ -3,6 +3,11 @@
 
 #include <Windows.h>
 #include <stdint.h>
+#include <vector>
+
+class Geometry {
+	std::vector<Point> data;
+};
 
 struct Point {
 	uint32_t x, y;
@@ -51,7 +56,7 @@ struct Tri {
 	}
 };
 
-struct Rect{
+struct Rect {
 	uint32_t left, top, right, bottom;
 
 	Rect() { left = 0; top = 0; right = 0; bottom = 0; };

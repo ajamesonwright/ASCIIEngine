@@ -62,13 +62,14 @@ public:
 		}
 	};
 	
-	DrawArea draw_area_;
+
 
 	//const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
 	const uint32_t td_colour_passive = 0x0, fp_colour_passive = 0x0, bg_colour_passive = 0x444444;
 	const uint32_t td_colour_active = 0x111111, fp_colour_active = 0x111133, bg_colour_active = 0x444444;
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
+	DrawArea* GetDrawArea();
 	void SetDrawArea(Rect* rect, uint8_t border_width);
 	void UpdateRenderArea(int panel, Point p_p, uint32_t colour = 0xFF0000, bool valid = false);
 	void UpdateRenderArea(int panel, Line p_l, uint32_t colour = 0x666666, bool valid = false);
@@ -85,6 +86,8 @@ public:
 	UINT* GetMemoryLocation(int panel, Point p);
 
 private:
+	DrawArea draw_area_;
+
 	Point Clamp(Point &p, Point max);
 	bool Validate(int panel, Point p);
 	bool Validate(int panel, Line l);

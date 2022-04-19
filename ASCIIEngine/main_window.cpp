@@ -121,7 +121,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	HWND hwnd;
-	MSG msg;
 	// Create window
 	//AdjustWindowRect(&main_rect, WS_OVERLAPPEDWINDOW | WS_VISIBLE, true);
 	hwnd = CreateWindow(wc.lpszClassName, L"ASCII Engine", WS_OVERLAPPEDWINDOW | WS_VISIBLE, MW::window_starting_x_, MW::window_starting_y_, MW::window_starting_width_, MW::window_starting_height_, 0, 0, hInstance, 0);
@@ -144,25 +143,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Calculate offsets between client window and main window
 	Rect mwr = MW::GetMainWindowRect();
 	Rect dr = MW::GetDrawRect();
-	MW::SetMTCOffsetX(((mwr.right - mwr.left) - (dr.right - dr.left)) / 2);
-	MW::SetMTCOffsetY(((mwr.bottom - mwr.top) - (dr.bottom - dr.top) - 3) / 2);
+	MW::SetMTCOffsetX(((mwr.GetWidth()) - (dr.GetWidth())) / 2);
+	MW::SetMTCOffsetY(((mwr.GetHeight()) - (dr.GetHeight()) - 31) / 2);
 
 	// Clear DrawArea
 	MW::GetRenderer()->ClearRenderArea(true);
 
 	// Message loop
 	while (MW::GetRunningState()) {
-		while (PeekMessage(&msg, hwnd, 0, 0, PM_REMOVE)) {
-			// Collect cursor data
-			MW::event_message = msg;
-
+		while (PeekMessage(&MW::event_message, hwnd, 0, 0, PM_REMOVE)) {
 			MW::ConditionMouseCoords(MW::event_message.pt);
 			MW::current_panel_ = MW::GetCursorFocus((Point)MW::event_message.pt);
 			if (MW::current_panel_ != MW::GetRenderer()->GetFocus())
 				MW::GetRenderer()->SetFocus(MW::current_panel_);
 			
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			TranslateMessage(&MW::event_message);
+			DispatchMessage(&MW::event_message);
 		}
 		MW::GetRenderer()->ClearRenderArea();
 		// Draw updated RenderArea to screen
@@ -195,7 +191,7 @@ void main_window::SetRunningState(int p_run_state) {
 int main_window::GetCursorFocus(Point p) {
 
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-		if (MW::GetRenderer()->draw_area_.aabb[i].Collision(p)) {
+		if (MW::GetRenderer()->GetDrawArea()->aabb[i].Collision(p)) {
 			return i;
 		}
 	}
