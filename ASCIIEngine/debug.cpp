@@ -56,11 +56,6 @@ std::string debug::ToString(POINT p) {
 }
 
 void debug::ToggleDebugPrinting() {
-	// assumes:
-	// if parameter is true, debug printing toggled on
-	// if parameter is false, toggle off
-	// if no parameter given, debug parameter is switched to its opposite state
-	
 	print = !print;
 }
 

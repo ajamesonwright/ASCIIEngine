@@ -8,19 +8,16 @@ public:
 		ML_DOWN,
 		MM_DOWN,
 		MR_DOWN,
-		KEY_DOWN,
 
 		KEY_SIZE,
 	};
 
-	struct Input_State {
+	struct ButtonState {
 		bool held = false;
 		bool update = false;
 	};
 
-	struct Inputs {
-		Input_State input[KEY_SIZE];
-	} input_;
+	ButtonState input[KEY_SIZE];
 };
 
 #endif

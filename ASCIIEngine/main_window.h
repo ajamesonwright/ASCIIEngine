@@ -18,7 +18,7 @@ namespace main_window {
 	int run_state_;
 
 	// current mouseover panel
-	int current_panel_;
+	int current_panel_ = -1;
 
 	Renderer* renderer_ = nullptr;
 	Input* input_ = nullptr;
@@ -37,6 +37,7 @@ namespace main_window {
 	uint8_t main_to_client_offset_y_ = 0;
 
 	Rect main_rect, draw_rect;
+	Point2d geo_start, geo_end;
 
 	MSG event_message;
 
@@ -45,7 +46,7 @@ namespace main_window {
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
-	int GetCursorFocus(Point p);
+	int GetCursorFocus(Point2d p);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
@@ -65,7 +66,7 @@ namespace main_window {
 	Rect& GetDrawRect();
 	void SetDrawRect(HWND hwnd, Rect* rect);
 
-	void ConditionMouseCoords(Point& p);
+	void ConditionMouseCoords(Point2d& p);
 	void ConditionMouseCoords(POINT& p);
 };
 

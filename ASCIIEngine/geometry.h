@@ -5,48 +5,115 @@
 #include <stdint.h>
 #include <vector>
 
-class Geometry {
-	std::vector<Point> data;
-};
+struct Point2d {
 
-struct Point {
+public:
 	uint32_t x, y;
 
-	Point() { x = 0; y = 0; };
-	Point(POINT p) { x = p.x; y = p.y; };
-	Point(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; };
+	Point2d() { x = 0; y = 0; };
+	Point2d(POINT p) { x = p.x; y = p.y; };
+	Point2d(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; };
 
-	Point& operator = (Point const& obj) {
+	Point2d& operator = (Point2d const& obj) {
 		x = obj.x;
 		y = obj.y;
 		return *this;
 	}
 
-	Point& operator = (POINT const& obj) {
+	Point2d& operator = (POINT const& obj) {
 		x = obj.x;
 		y = obj.y;
 		return *this;
+	}
+
+	bool operator == (Point2d const& obj) {
+		return x == obj.x && y == obj.y;
+	}
+
+	int Displacement(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
+};
+
+struct Point3d {
+
+public:
+	uint32_t x, y, z;
+
+	Point3d() { x = 0; y = 0; z = 0; };
+	Point3d(Point2d p, uint32_t p_z) { x = p.x; y = p.y; z = p_z; };
+
+	Point3d& operator = (Point3d const& obj) {
+		x = obj.x;
+		y = obj.y;
+		z = obj.z;
+		return *this;
+	}
+
+	bool operator == (Point3d const& obj) {
+		return x == obj.x && y == obj.y && z == obj.z;
 	}
 };
 
-struct Line {
-	Point a, b;
+struct Ray2d : public Point2d {
 
-	Line() { Point a; Point b; };
-	Line(Point p_a, Point p_b) { a.x = p_a.x; a.y = p_a.y; b.x = p_b.x; b.y = p_b.y; };
+public:
+	uint16_t dir;
+
+	Ray2d() { x = 0; y = 0; dir = 0; };
+	Ray2d(uint32_t p_x, uint32_t p_y, uint16_t p_dir) { x = p_x; y = p_y; dir = p_dir; };
+};
+
+struct Ray3d : public Point3d {
+
+};
+
+class Geometry {
+
+public:
+	struct GeometryData {
+		void* handle;
+		int type;
+		std::vector<Point2d> vertices;
+	};
+
+	enum geometry_type {
+		G_LINE,
+		G_TRI,
+		G_RECT,
+		G_QUAD,
+		G_CIRCLE,
+		G_AABB,
+
+		G_NUM_TYPES,
+	};
+	
+	// Collision function, must be implemented based on geometry type
+	virtual bool Collision(Point2d p) = 0;
+};
+
+class Line : public Geometry {
+
+public:
+	Point2d a, b;
+
+	Line() { Point2d a; Point2d b; };
+	Line(Point2d p_a, Point2d p_b) { a.x = p_a.x; a.y = p_a.y; b.x = p_b.x; b.y = p_b.y; };
 
 	Line& operator = (Line const& obj) {
 		a = obj.a;
 		b = obj.b;
 		return *this;
 	}
+
+	bool Collision(Point2d p) override { return false; }
 };
 
-struct Tri {
-	Point a, b, c;
+class Tri : public Geometry {
 
-	Tri() { Point a; Point b; Point c; };
-	Tri(Point p_a, Point p_b, Point p_c) { a = p_a; b = p_b; c = p_c; };
+public:
+	Point2d a, b, c;
+
+	Tri() { Point2d a; Point2d b; Point2d c; };
+	Tri(Point2d p_a, Point2d p_b, Point2d p_c) { a = p_a; b = p_b; c = p_c; };
 
 	Tri& operator = (Tri const& obj) {
 		a = obj.a;
@@ -54,63 +121,72 @@ struct Tri {
 		c = obj.c;
 		return *this;
 	}
+
+	bool Collision(Point2d p) override { return false; }
 };
 
-struct Rect {
-	uint32_t left, top, right, bottom;
+// Four-sided shape that assumes orthogonal sides 
+class Rect : public Geometry {
 
-	Rect() { left = 0; top = 0; right = 0; bottom = 0; };
-	Rect(Point a, Point b) { left = min(a.x, b.x); top = min(a.y, b.y); right = max(a.x, b.x); bottom = max(a.y, b.y); };
-	Rect(RECT p_rect) { left = p_rect.left; top = p_rect.top; right = p_rect.right; bottom = p_rect.bottom; };
-	Rect(uint32_t p_left, uint32_t p_top, uint32_t p_right, uint32_t p_bottom) { left = p_left; top = p_top; right = p_right; bottom = p_bottom; };
+public:
+	Point2d LT, RB;
+	//uint32_t left, top, right, bottom;
+
+	Rect() { LT = Point2d(); RB = Point2d(); };
+	Rect(Point2d a, Point2d b) { LT = Point2d(min(a.x, b.x), min(a.y, b.y)); RB = Point2d(max(a.x, b.x), max(a.y, b.y)); }; // does not assume that a is LT and b is RB
+	Rect(RECT rect) { LT = Point2d(rect.left, rect.top); RB = Point2d(rect.right, rect.bottom); };
+	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) { LT = Point2d(left, top); RB = Point2d(right, bottom); };
 
 	Rect& operator = (Rect const& obj) {
-		left = obj.left;
-		top = obj.top;
-		right = obj.right;
-		bottom = obj.bottom;
+		LT = obj.LT;
+		RB = obj.RB;
 		return *this;
 	}
 
 	Rect& operator = (RECT const& obj) {
-		left = obj.left;
-		top = obj.top;
-		right = obj.right;
-		bottom = obj.bottom;
+		LT = Point2d(obj.left, obj.top);
+		RB = Point2d(obj.right, obj.bottom);
 		return *this;
 	}
 
-	int GetWidth() { return this->right - this->left; };
-	int GetHeight() { return this->bottom - this->top; };
+	int GetWidth() { return this->RB.x - this->LT.x; };
+	int GetHeight() { return this->RB.y - this->LT.y; };
+	bool Collision(Point2d p) override { return (p.x >= LT.x && p.x < RB.x&& p.y >= LT.y && p.y < RB.y); }
 };
 
-struct Quad {
-	Point a, b, c, d;
+class Quad : public Geometry {
+	Point2d a, b, c, d;
+
+	bool Collision(Point2d p) override { return false; }
 };
 
-struct Circle {
-	Point c;
+class Circle : public Geometry {
+	Point2d c;
 	uint16_t r = 0;
+
+	bool Collision(Point2d p) override { return false; }
 };
 
-struct AABB {
-	Point LT, RB;
+class AABB : public Geometry {
 
-	AABB() {};
-	AABB(Point p_a, Point p_b) { LT = p_a; RB = p_b; };
-	AABB(Rect rect) { LT = Point(rect.left, rect.top); RB = Point(rect.right, rect.bottom); };
+public:
+	Point2d LT, RB;
 
-	AABB& operator = (Rect const& obj) {
-		LT = Point(obj.left, obj.top);
-		RB = Point(obj.right, obj.bottom);
-		return *this;
-	}
+	//AABB() {};
+	//AABB(Point p_a, Point p_b) { LT = p_a; RB = p_b; };
+	//AABB(Rect rect) { LT = Point(rect.left, rect.top); RB = Point(rect.right, rect.bottom); };
 
-	bool Collision(Point p) {
-		if (p.x >= LT.x && p.x < RB.x && p.y >= LT.y && p.y < RB.y)
-			return true;
-		return false;
-	}
+	//AABB& operator = (Rect const& obj) {
+	//	LT = Point(obj.left, obj.top);
+	//	RB = Point(obj.right, obj.bottom);
+	//	return *this;
+	//}
+
+	//bool Collision(Point p) {
+	//	if (p.x >= LT.x && p.x < RB.x && p.y >= LT.y && p.y < RB.y)
+	//		return true;
+	//	return false;
+	//}
 };
 
 #endif
