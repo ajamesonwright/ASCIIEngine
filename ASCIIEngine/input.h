@@ -18,6 +18,8 @@ public:
 	};
 
 	ButtonState input[KEY_SIZE];
+
+	void ClearInput() { for (int i = 0; i < KEY_SIZE; i++) { input[i].held = false; input[i].update = true; }; };
 };
 
 #endif

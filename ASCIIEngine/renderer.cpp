@@ -7,6 +7,7 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	instanced = true;
 
 	draw_area_ = DrawArea();
+	fov = 60;
 }
 
 Renderer::DrawArea* Renderer::GetDrawArea() {
@@ -18,8 +19,8 @@ void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 	/*
 	* A draw_area_ object contains information regarding each panel that will be drawn to screen.
 	* draw_area_.panels[BACKGROUND] is the entire range of the client rect { 1604, 561 } zero indexed.
-	* draw_area_.panels[TOP_DOWN] is the range from:		LT = (dr.LT.x + BW, dr.LT.y + BW)						BR = ((dr.LT.x + dr.RB.x) / 2 - BW, dr.RB.y - BW)
-	* draw_area_.panels[FIRST_PERSON] is the range from		LT = ((dr.LT.x + dr.RB.x) / 2 + BW, dr.LT.y + BW)		BR = (dr.RB.x - BW, dr.RB.y - BW)
+	* draw_area_.panels[TOP_DOWN] is the range from:		LT = (dr.LT.x + BW, dr.LT.y + BW + 1)						BR = ((dr.LT.x + dr.RB.x) / 2 - BW, dr.RB.y - BW)
+	* draw_area_.panels[FIRST_PERSON] is the range from		LT = ((dr.LT.x + dr.RB.x) / 2 + BW, dr.LT.y + BW + 1)		BR = (dr.RB.x - BW, dr.RB.y - BW)
 	* Using WindowRect dimensions of 1620 by 800, yields total area of 1604W x 561H, zero indexed.
 	*/
 	Rect rect = *rect_inc;
@@ -46,8 +47,9 @@ void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.bmi.bmiHeader.biBitCount = 32;
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 
-	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.LT.x + border_width, rect.LT.y + border_width), Point2d(rect.GetWidth() / 2 - border_width, rect.RB.y - border_width));
-	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.GetWidth() / 2 + border_width, rect.LT.y + border_width), Point2d(rect.RB.x - border_width, rect.RB.y - border_width));
+	// Add 1 additional pixel to top point coordinate to make sure we're working with even numbers for height
+	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.LT.x + border_width, rect.LT.y + border_width + 1), Point2d(rect.GetWidth() / 2 - border_width, rect.RB.y - border_width));
+	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.GetWidth() / 2 + border_width, rect.LT.y + border_width + 1), Point2d(rect.RB.x - border_width, rect.RB.y - border_width));
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
@@ -62,6 +64,30 @@ void Renderer::UpdateRenderArea(Point2d p, int panel, uint32_t colour, bool vali
 		*pixel = colour;
 	
 	draw_area_.update = true;
+}
+
+void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid) {
+	if (!valid)
+		if (!Validate(r, panel))
+			return;
+
+	// Draw main line
+	Point2d base, tip;
+	float cosx = cos(r.dir * M_PI / 180);
+	float siny = sin(r.dir * M_PI / 180);
+	base = Point2d(r.x - r.size * cosx / 2, r.y - r.size * siny / 2);
+	tip = Point2d(r.x + r.size * cosx / 2, r.y + r.size * siny / 2);
+	Line main = Line(base, tip);
+	UpdateRenderArea(main, panel, colour, true);
+
+	// Draw edges of arrow
+	Point2d left, right;
+	left = Point2d(tip.x - 0.30 * r.size * cos((r.dir + 180 - 135) * M_PI / 180), tip.y - 0.30 * r.size * sin((r.dir + 180 - 135) * M_PI / 180));
+	right = Point2d(tip.x - 0.30 * r.size * cos((r.dir + 180 + 135) * M_PI / 180), tip.y - 0.30 * r.size * sin((r.dir + 180 + 135) * M_PI / 180));
+	Line left_edge = Line(tip, left);
+	Line right_edge = Line(tip, right);
+	UpdateRenderArea(left_edge, panel, colour, true);
+	UpdateRenderArea(right_edge, panel, colour, true);
 }
 
 void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
@@ -165,7 +191,7 @@ void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	Rect rect = p_rect;
 	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
 	Point2d p = { rect.LT.x, rect.RB.y };
-	for (int i = rect.RB.y; i > rect.LT.y; i--) {
+	for (int i = rect.RB.y; i >= rect.LT.y; i--) {
 		for (int j = rect.LT.x; j <= rect.RB.x; j++) {
 			UpdateRenderArea(p, panel, colour, true);
 			p.x++;
@@ -199,7 +225,7 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	* iterate and set all bits to colour corresponding to panel in which they are located.
 	*/
 	uint32_t* pixel = (uint32_t*)draw_area_.data;
-	uint32_t colour = bg_colour_passive;
+	uint32_t colour = colours[BACKGROUND][0];
 	uint16_t pixel_count, width;
 	Point2d current_pixel;
 
@@ -224,9 +250,9 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 					pixel_count = 0;
 					width = draw_area_.panels[TOP_DOWN].GetWidth();
 					// set colour depending on cursor location and whether the panel focus has been locked
-					colour = td_colour_passive;
+					colour = colours[TOP_DOWN][0];
 					if (draw_area_.lock_focus == TOP_DOWN || (draw_area_.focus == TOP_DOWN && draw_area_.lock_focus == -1)) {
-						colour = td_colour_active;
+						colour = colours[TOP_DOWN][1];
 					}
 					*pixel++ = colour;
 					continue;
@@ -236,14 +262,14 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 					pixel_count = 0;
 					width = draw_area_.panels[FIRST_PERSON].GetWidth();
 					// set colour depending on cursor location and whether the panel focus has been locked
-					colour = fp_colour_passive;
+					colour = colours[FIRST_PERSON][0];
 					if (draw_area_.lock_focus == FIRST_PERSON || (draw_area_.focus == FIRST_PERSON && draw_area_.lock_focus == -1)) {
-						colour = fp_colour_active;
+						colour = colours[FIRST_PERSON][1];
 					}
 					*pixel++ = colour;
 					continue;
 				}
-				*pixel++ = bg_colour_passive;
+				*pixel++ = colours[BACKGROUND][0];
 			}
 		}
 	}
@@ -255,13 +281,10 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 		case TOP_DOWN:
 		{
 			draw_area_.focus == panel ? colour = colours[TOP_DOWN][1] : colour = colours[TOP_DOWN][0];
-			//colour = td_colour_passive;
 		} break;
 		case FIRST_PERSON:
 		{
 			draw_area_.focus == panel ? colour = colours[FIRST_PERSON][1] : colour = colours[FIRST_PERSON][0];
-			//draw_area_.focus == panel ? colour = fp_colour_active : colour = fp_colour_passive;
-			//colour = fp_colour_passive;
 		} break;
 		case BACKGROUND:
 		{
@@ -337,6 +360,19 @@ bool Renderer::Validate(Point2d p, int panel) {
 	if (panel == -1)
 		return (p.x >= 0 && p.x < draw_area_.width&& p.y >= 0 && p.y < draw_area_.height);
 	return (p.x >= draw_area_.panels[panel].LT.x && p.x < draw_area_.panels[panel].RB.x && p.y >= draw_area_.panels[panel].LT.y && p.y < draw_area_.panels[panel].RB.y);
+}
+
+bool Renderer::Validate(Ray2d r, int panel) {
+	
+	float cosx = cos(r.dir * M_PI / 180);
+	float siny = sin(r.dir * M_PI / 180);
+
+	if (panel == -1)
+		return (r.x - (r.size / 2 * cosx) >= 0 && r.x + (r.size / 2 * cosx) < draw_area_.width && r.y - (r.size / 2 * siny) >= 0 && r.y + (r.size / 2 * siny) < draw_area_.height);
+	return (r.x - (r.size / 2 * cosx) >= draw_area_.panels[panel].LT.x
+		&& r.x + (r.size / 2 * cosx) < draw_area_.panels[panel].RB.x
+		&& r.y - (r.size / 2 * siny) >= draw_area_.panels[panel].LT.y
+		&& r.y + (r.size / 2 * siny) < draw_area_.panels[panel].RB.y);
 }
 
 bool Renderer::Validate(Line l, int panel) {

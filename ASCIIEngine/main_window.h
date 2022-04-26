@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <stdint.h>
+#include <vector>
 #include "geometry.h"
 #include "input.h"
 
@@ -38,15 +39,20 @@ namespace main_window {
 
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
+	Ray2d camera;
+	std::vector<Geometry> geometry_queue;
 
 	MSG event_message;
 
 	Renderer* GetRenderer();
+	Rect* GetDrawAreaRect(int panel = 2);
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
 	int GetCursorFocus(Point2d p);
+
+	uint32_t* FindMemoryHandle(std::vector<Point2d*> p_v);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();

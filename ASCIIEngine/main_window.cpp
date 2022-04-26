@@ -25,7 +25,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::GetRenderer()) {
 			MW::renderer_->SetDrawArea(&MW::GetDrawRect(), MW::border_width_);
 		}
-	}
+		MW::GetRenderer()->ClearRenderArea(true);
+	} break;
 	case WM_SIZE:
 	{
 		// should this be set and then get? main_rect and draw_rect appear to be 0 initialized at this point
@@ -35,8 +36,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		Rect& temp_dr = MW::GetDrawRect();
 		MW::SetDrawRect(hwnd, &temp_dr);
 		// Re-calculate offsets
-		MW::SetMTCOffsetX(((temp_mwr.GetWidth()) - (temp_dr.GetWidth())) / 2);
-		MW::SetMTCOffsetY(((temp_mwr.GetHeight()) - (temp_dr.GetHeight()) - 31) / 2);
+		MW::SetMTCOffsetX((temp_mwr.GetWidth()) - (temp_dr.GetWidth()) / 2);
+		MW::SetMTCOffsetY((temp_mwr.GetHeight() - (temp_dr.GetHeight()) - 31) / 2);
 
 		// executed once per program run
 		bool first_pass = false;
@@ -48,7 +49,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::GetRenderer() && !first_pass) {
 			MW::renderer_->SetDrawArea(&temp_dr, MW::border_width_);
 		}
-	}
+		MW::GetRenderer()->ClearRenderArea(true);
+	} break;
 	case WM_KEYDOWN:
 	{
 		switch (wParam) {
@@ -59,6 +61,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		} break;
 		case (VK_ESCAPE):
 		{
+			MW::input_->ClearInput();
 			// clear focus lock or exit if no lock present
 			int locked = MW::GetRenderer()->GetFocusLock();
 			if (locked != -1) {
@@ -91,7 +94,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::current_panel_ == Renderer::BACKGROUND)
 			break;
 
-		//MW::renderer_->SetFocus(MW::current_panel_);
 		MW::renderer_->UpdateRenderArea(MW::renderer_->GetDrawArea()->panels[MW::current_panel_], MW::current_panel_, MW::renderer_->colours[MW::current_panel_][1], true);
 	} break;
 	case WM_LBUTTONDOWN:
@@ -106,7 +108,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 		if (MW::GetRenderer()->GetFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
 			MW::geo_start = MW::event_message.pt;
-			//MW::input_->input_states.input[Input::ML_DOWN].held = true;
 			MW::input_->input[Input::ML_DOWN].held = true;
 			MW::input_->input[Input::ML_DOWN].update = true;
 		}
@@ -115,18 +116,25 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	{
 		debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_);
 
+		// Clear held for each button up message
+		MW::input_->input[Input::ML_DOWN].held = false;
+		MW::input_->input[Input::ML_DOWN].update = true;
+
 		// Check for focus lock before calculating square end point
 		if (MW::GetRenderer()->GetFocusLock() != -1) {
 			MW::geo_end = MW::event_message.pt;
 		}
 		if (MW::geo_start.Displacement(MW::geo_end) > 10) {
-			MW::GetRenderer()->UpdateRenderArea(Rect(MW::geo_start, MW::geo_end), Renderer::TOP_DOWN, 0xff0000, false);
+			Rect rect = Rect(MW::geo_start, MW::geo_end);
+			std::vector<Point2d*> v; v.push_back(&MW::geo_start); v.push_back(&MW::geo_end);
+			uint32_t* handle = MW::FindMemoryHandle(v);
+			Geometry::GeometryData gd = Geometry::GeometryData(MW::GetRenderer()->GetMemoryLocation(Renderer::TOP_DOWN, Point2d(min(MW::geo_start.x, MW::geo_end.x), max(MW::geo_start.y, MW::geo_end.y))), );
+			MW::geometry_queue.push_back(rect);
+			MW::GetRenderer()->UpdateRenderArea(rect, Renderer::TOP_DOWN, 0xff0000, false);
 			MW::geo_start = Point2d();
 			MW::geo_end = Point2d();
-			MW::input_->input[Input::ML_DOWN].held = false;
-			MW::input_->input[Input::ML_DOWN].update = true;
 		}
-	}
+	} break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
 	}
@@ -187,18 +195,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	MW::SetRunningState(RUNNING);
 
 	// Calculate offsets between client window and main window
-	Rect mwr = MW::GetMainWindowRect();
-	Rect dr = MW::GetDrawRect();
-	MW::SetMTCOffsetX(((mwr.GetWidth()) - (dr.GetWidth())) / 2);
-	MW::SetMTCOffsetY(((mwr.GetHeight()) - (dr.GetHeight()) - 31) / 2);
+	{
+		Rect mwr = MW::GetMainWindowRect();
+		Rect dr = MW::GetDrawRect();
+		MW::SetMTCOffsetX(((mwr.GetWidth()) - (dr.GetWidth())) / 2);
+		MW::SetMTCOffsetY(((mwr.GetHeight()) - (dr.GetHeight()) - 31) / 2);
+	}
 
 	// Set initial inputs
 	MW::input_ = new Input();
 	// Clear DrawArea
 	MW::GetRenderer()->ClearRenderArea(true);
 	// Set initial viewport location and orientation
-	Ray2d camera = Ray2d();
-
+	{
+		Rect* td_panel = MW::GetDrawAreaRect(Renderer::TOP_DOWN);
+		MW::camera = Ray2d(td_panel->LT.x + td_panel->GetWidth() / 2, td_panel->LT.y + td_panel->GetHeight() / 2, -90);
+		MW::camera.SetSize(30);
+	}
+	
 	// Message loop
 	while (MW::GetRunningState()) {
 		for (int i = 0; i < Input::KEY_SIZE; i++) {
@@ -212,10 +226,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			TranslateMessage(&MW::event_message);
 			DispatchMessage(&MW::event_message);
 		}
-		if (MW::input_->input[Input::ML_DOWN].held == true) {
+
+		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::GetRenderer()->GetFocusLock() == 0) {
+			//MW::GetRenderer()->ClearRenderArea(true);
 			MW::GetRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
-		//MW::GetRenderer()->ClearRenderArea();
+
+		MW::GetRenderer()->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
 		// Draw updated RenderArea to screen
 		MW::GetRenderer()->DrawRenderArea(hdc);
 	}
@@ -226,6 +243,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 Renderer* main_window::GetRenderer() {
 	return renderer_;
+}
+
+Rect* main_window::GetDrawAreaRect(int panel) {
+	return &MW::renderer_->GetDrawArea()->panels[panel];
 }
 
 bool main_window::GetRunningState() {
@@ -251,6 +272,57 @@ int main_window::GetCursorFocus(Point2d p) {
 		}
 	}
 	return -1;
+}
+
+// Determine memory handle for bottom left point of vector and sort points in a way that will be usable for all geometry types
+uint32_t* main_window::FindMemoryHandle(std::vector<Point2d*> v) {
+	std::vector<Point2d*> result = v;
+	int size = v.size();
+	switch (size) {
+	case 0:
+	{
+		// null case
+		return nullptr;
+	} break;
+	case 1:
+	{
+		// trivial case
+		return MW::GetRenderer()->GetMemoryLocation(0, *v.at(0));
+	} break;
+	case 2:
+	{
+		// line (sorting is not relevant)
+		if (ComparePointsByCoordinate(0b101, nullptr, v.at(0), v.at(1)) == 0)
+			return MW::GetRenderer()->GetMemoryLocation(0, *v.at(0));
+		return MW::GetRenderer()->GetMemoryLocation(0, *v.at(1));
+	} break;
+	case 3:
+	{
+		// tri (sorted from bottom left-most then clockwise around)
+		int bottom_left = ComparePointsByCoordinate(0b101, &v, nullptr, nullptr);
+
+		if (bottom_left != 0) {
+			SwapPoint(*v.at(0), *v.at(bottom_left));
+		}
+		int next = ComparePointsByCoordinate(0b10, &v, nullptr, nullptr, 1);
+		if (next != 1) {
+			SwapPoint(*v.at(1), *v.at(next));
+		}
+	} break;
+	case 4:
+	{
+		// rect or quad
+
+	} break;
+	default:
+	{
+		// circle
+	}
+	}
+
+	for (int i = 0; i < size; i++) {
+
+	}
 }
 
 void main_window::SetWindowHeight(uint16_t p_height) {
@@ -333,10 +405,9 @@ void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 }
 
 void main_window::ConditionMouseCoords(Point2d& p) {
-	// likely needs to be updated to include panel detection
 
 	// condition mouse cursor coordinates to be within range
-	// 30 pixels is fixed for Y dimension due to title bar
+	// 31 pixels is fixed for Y dimension due to title bar
 	p.y -= (MW::GetMainWindowRect().LT.y + 31);
 	p.x -= (MW::GetMainWindowRect().LT.x + MW::GetMTCOffsetX());
 }

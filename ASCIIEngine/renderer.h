@@ -2,7 +2,8 @@
 #define ASCIIENGINE_RENDERER_H_
 
 #include <Windows.h>
-#include <vector>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include "geometry.h"
 #include "debug.h"
 
@@ -64,13 +65,12 @@ public:
 	};
 
 	const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
-	const uint32_t td_colour_passive = 0x0, fp_colour_passive = 0x0, bg_colour_passive = 0x444444;
-	const uint32_t td_colour_active = 0x111111, fp_colour_active = 0x111133, bg_colour_active = 0x444444;
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
 	DrawArea* GetDrawArea();
 	void SetDrawArea(Rect* rect, uint8_t border_width);
 	void UpdateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
+	void UpdateRenderArea(Ray2d r, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x666666, bool valid = false);
 	void RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
 	void RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
@@ -88,9 +88,11 @@ public:
 
 private:
 	DrawArea draw_area_;
+	uint8_t fov; // field of view of FIRST_PERSON panel in degrees
 
 	Point2d Clamp(Point2d &p, Point2d max);
 	bool Validate(Point2d p, int panel = -1);
+	bool Validate(Ray2d r, int panel = -1);
 	bool Validate(Line l, int panel = -1);
 	bool Validate(Rect rect, int panel = -1);
 	void DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour);
