@@ -26,10 +26,6 @@ public:
 		return *this;
 	}
 
-	Point2d& operator < (Point2d const& obj) {
-
-	}
-
 	bool operator == (Point2d const& obj) {
 		return x == obj.x && y == obj.y;
 	}
@@ -37,12 +33,12 @@ public:
 	int Displacement(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
 };
 
-class Point3d {
+class Point3d : public Point2d {
 
 public:
-	uint32_t x, y, z;
+	uint32_t z;
 
-	Point3d() { x = 0; y = 0; z = 0; };
+	Point3d() { z = 0; };
 	Point3d(Point2d p, uint32_t p_z) { x = p.x; y = p.y; z = p_z; };
 
 	Point3d& operator = (Point3d const& obj) {
@@ -57,7 +53,7 @@ public:
 	}
 };
 
-struct Ray2d : public Point2d {
+class Ray2d : public Point2d {
 
 public:
 	int16_t dir; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
@@ -83,118 +79,14 @@ public:
 	Ray3d(uint32_t p_x, uint32_t p_y, uint32_t p_z, uint16_t p_yaw, uint16_t p_pitch) { x = p_x; y = p_y; z = p_z; yaw = p_yaw; pitch = p_pitch; };
 };
 
-int ComparePointsByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v = nullptr, Point2d* p1 = nullptr, Point2d* p2 = nullptr, int begin = -1, int end = -1) {
-	
-	// Checking for invalid compare_type values
-	if (0b11110000 & compare_type || 0b1000 & compare_type || 0b0000 & compare_type)
-		return -1;
-	if (0b10 & compare_type && 0b100 & compare_type)
-		return -1;
-
-	if (v) {
-		return ComparePointVectorByCoordinate(compare_type, v, begin, end);
-	}
-	if (p1 && p2) {
-		return ComparePointsByCoordinate(compare_type, p1, p2);
-	}
-	return -1;
-}
-
-int ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v, int begin = -1, int end = -1) {
-
-	uint16_t range_begin, range_end;
-	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
-
-	uint32_t compare_value = (compare[0] & compare_type) ? UINT32_MAX : 0;
-	int index = -1;
-	uint32_t current;
-
-	begin == -1 ? range_begin = 0 : range_begin = begin;
-	end == -1 ? range_end = v->size() : range_end = end;
-	for (uint8_t i = range_begin; i < range_end; i++) {
-		Point2d p = *v->at(i);
-		current = compare_type >> 1 * p.x + compare_type >> 2 * p.y;
-		// Test teh selected coordinate value against the compare value
-		if (((compare[0] & compare_type) && current > compare_value) || (!(compare[0] & compare_type) && current < compare_value)) {
-			compare_value = current;
-			index = i;
-		}
-	}
-
-	return index;
-}
-
-int ComparePointsByCoordinate(uint8_t compare_type, Point2d* p1, Point2d* p2) {
-
-	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
-
-	uint32_t compare_value[2];
-	compare_value[0] = (compare[1] & compare_type) * p1->x + (compare[2] & compare_type) * p1->y;
-	compare_value[1] = (compare[1] & compare_type) * p2->x + (compare[2] & compare_type) * p2->y;
-
-	int index = -1;
-	if (compare[0] & compare_type) {
-		(compare_value[0] >= compare_value[1]) ? index = 0 : index = 1;
-	}
-	else {
-		(compare_value[0] <= compare_value[1]) ? index = 0 : index = 1;
-	}
-
-	return index; 
-}
-
-void SwapPoint(Point2d& p1, Point2d& p2) {
-	Point2d* temp;
-	temp = &p1;
-	p1 = p2;
-	p2 = *temp;
-}
-
-// Compare two points by X coordinate value.
-// Return value indicates whether a change occurred.
-bool SortPointByX(Point2d& a, Point2d& b) {
-	Point2d temp;
-	if (a.x < b.x) {
-		temp = a;
-		a = b;
-		b = temp;
-		return true;
-	}
-	return false;
-}
-
-// Compare two points by Y coordinate value.
-// Return value indicates whether a change occurred.
-bool SortPointByY(Point2d& a, Point2d& b) {
-	Point2d temp;
-	if (a.y < b.y) {
-		temp = a;
-		a = b;
-		b = temp;
-		return true;
-	}
-	return false;
-}
-
 class Geometry {
 
 public:
-	struct GeometryData {
-		// CURRENTLY STORING ALL VERTICES TWICE - COULD BE REFACTORED TO WORK ONLY ON A VECTOR INPUT
-		void* handle; // corresponds to bottom left corner/edge
-		int type;
-		std::vector<Point2d> vertices;
+	void* handle; // corresponds to bottom left corner/edge
+	int type;
+	std::vector<Point2d*> vertices;
 
-		GeometryData& operator = (GeometryData const& obj) {
-			handle = obj.handle;
-			type = obj.type;
-			vertices = obj.vertices;
-			return *this;
-		}
-
-		GeometryData() { handle = nullptr; type = -1; };
-		GeometryData(void* p_handle, int p_type, std::vector<Point2d> p_vertices) { handle = p_handle; type = p_type; vertices = p_vertices; };
-	};
+	Geometry() { handle = nullptr; type = -1; };
 
 	enum geometry_type {
 		G_LINE,
@@ -202,129 +94,151 @@ public:
 		G_RECT,
 		G_QUAD,
 		G_CIRCLE,
-		G_AABB,
 
 		G_NUM_TYPES,
 	};
-
-	enum class compare {
-		COMPARE_X_LO = 0b0000'0010,
-		COMPARE_X_HI = 0b0000'0011,
-		COMPARE_Y_LO = 0b0000'0100,
-		COMPARE_Y_HI = 0b0000'0101,
-		COMPARE_Z_LO = 0b0000'1000,
-		COMPARE_Z_HI = 0b0000'1001,
-	};
 	
 	// Collision function, must be implemented based on geometry type
-	virtual bool Collision(Point2d p) = 0;
+	//virtual bool Collision(Point2d p) = 0;
+	void SetHandle(void* p_handle) { handle = p_handle; };
+protected:
+	int ComparePointsByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v = nullptr, Point2d* p1 = nullptr, Point2d* p2 = nullptr, int begin = -1, int end = -1);
+	//void SwapPoint(Point2d& p1, Point2d& p2);
+private:
+	int ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v, int begin = -1, int end = -1);
+	int ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Point2d* p2);
 };
 
 class Line : public Geometry {
 
 public:
-	Point2d a, b;
-	GeometryData gd;
+	Point2d left, right;
+	Line() {};
+	Line(Point2d a, Point2d b) {
+		// Using simple comparison of x and y coords for line objects
+		if (a.y > b.y) {
+			vertices.push_back(&a); vertices.push_back(&b);
+		} else {
+			vertices.push_back(&b); vertices.push_back(&a);
+		}
+		type = G_LINE;
 
-	Line() { Point2d a; Point2d b; GeometryData gd; };
-	Line(Point2d p_a, Point2d p_b) { a.x = p_a.x; a.y = p_a.y; b.x = p_b.x; b.y = p_b.y; gd = GeometryData(); gd.vertices.push_back(a); gd.vertices.push_back(b); gd.type = G_LINE; };
-	Line(Point2d p_a, Point2d p_b, void* p_handle, int p_type) { a.x = p_a.x; a.y = p_a.y; b.x = p_b.x; b.y = p_b.y; std::vector<Point2d> v; v.push_back(a); v.push_back(b); gd = GeometryData(p_handle, p_type, v); };
+		if (a.x < b.x) {
+			left = a;
+			right = b;
+		}
+		else {
+			left = b;
+			right = a;
+		}
+	};
+	Line(Geometry g) {
+		left = *g.vertices.at(0);
+		right = *g.vertices.at(1);
+	}
 
 	Line& operator = (Line const& obj) {
-		a = obj.a;
-		b = obj.b;
-		gd = obj.gd;
+		handle = obj.handle;
+		type = obj.type;
+		vertices = obj.vertices;
+		left = obj.left;
+		right = obj.right;
 		return *this;
 	}
 
-	bool Collision(Point2d p) override { return false; }
+	bool Collision(Point2d p) { return false; }
 };
 
 class Tri : public Geometry {
 
 public:
-	Point2d a, b, c;
-
-	Tri() { Point2d a; Point2d b; Point2d c; };
-	Tri(Point2d p_a, Point2d p_b, Point2d p_c) { a = p_a; b = p_b; c = p_c; };
+	Tri() {};
+	Tri(Point2d a, Point2d b, Point2d c) {
+		vertices.push_back(&a); vertices.push_back(&b); vertices.push_back(&c);
+		int index = ComparePointsByCoordinate(0b101, &vertices);
+		if (index != 0)
+			std::swap(vertices.at(0), vertices.at(index));
+		handle = &vertices.at(0);
+		// currently would not account for points with the same x-coord
+		index = ComparePointsByCoordinate(0b10, &vertices, nullptr, nullptr, 1);
+		if (index != 1)
+			std::swap(*vertices.at(1), *vertices.at(index));
+	};
 
 	Tri& operator = (Tri const& obj) {
-		a = obj.a;
-		b = obj.b;
-		c = obj.c;
+		handle = obj.handle;
+		type = obj.type;
+		vertices = obj.vertices;
 		return *this;
 	}
 
-	bool Collision(Point2d p) override { return false; }
+	bool Collision(Point2d p) { return false; }
 };
 
 // Four-sided shape that assumes orthogonal sides 
 class Rect : public Geometry {
 
 public:
-	Point2d LT, RB;
-	Point2d LB, RT;
+	Point2d lt, rb;
+	Point2d lb, rt;
 
-	Rect() { LT = Point2d(); RB = Point2d(); LB = Point2d(); RT = Point2d(); };
-	Rect(Point2d a, Point2d b) { LT = Point2d(min(a.x, b.x), min(a.y, b.y)); RB = Point2d(max(a.x, b.x), max(a.y, b.y)); LB = Point2d(min(a.x, b.x), max(a.y, b.y)); RT = Point2d(max(a.x, b.x), min(a.y, b.y)); }; // does not assume that a is LT and b is RB
-	Rect(RECT rect) { LT = Point2d(rect.left, rect.top); RB = Point2d(rect.right, rect.bottom); LB = Point2d(rect.left, rect.bottom); RT = Point2d(rect.right, rect.top); };
-	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) { LT = Point2d(left, top); RB = Point2d(right, bottom); LB = Point2d(left, bottom); RT = Point2d(right, top);
+	Rect() { lt = Point2d(); rb = Point2d(); lb = Point2d(); rt = Point2d(); };
+	Rect(Point2d a, Point2d b) {
+		lt = Point2d(min(a.x, b.x), min(a.y, b.y));
+		rb = Point2d(max(a.x, b.x), max(a.y, b.y));
+		lb = Point2d(min(a.x, b.x), max(a.y, b.y));
+		rt = Point2d(max(a.x, b.x), min(a.y, b.y));
+		vertices.push_back(&lb);
+		vertices.push_back(&lt);
+		vertices.push_back(&rt);
+		vertices.push_back(&rb);
+	};
+	Rect(RECT rect) { lt = Point2d(rect.left, rect.top); rb = Point2d(rect.right, rect.bottom); lb = Point2d(rect.left, rect.bottom); rt = Point2d(rect.right, rect.top); };
+	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) { lt = Point2d(left, top); rb = Point2d(right, bottom); lb = Point2d(left, bottom); rt = Point2d(right, top);
 	};
 
 	Rect& operator = (Rect const& obj) {
-		LT = obj.LT;
-		RB = obj.RB;
-		LB = obj.LB;
-		RT = obj.RT;
+		handle = obj.handle;
+		type = obj.type;
+		vertices = obj.vertices;
+		lt = obj.lt;
+		rb = obj.rb;
+		lb = obj.lb;
+		rt = obj.rt;
 		return *this;
 	}
 
 	Rect& operator = (RECT const& obj) {
-		LT = Point2d(obj.left, obj.top);
-		RB = Point2d(obj.right, obj.bottom);
-		LB = Point2d(obj.left, obj.bottom);
-		RT = Point2d(obj.right, obj.top);
+		lt = Point2d(obj.left, obj.top);
+		rb = Point2d(obj.right, obj.bottom);
+		lb = Point2d(obj.left, obj.bottom);
+		rt = Point2d(obj.right, obj.top);
+		handle = &lb;
+		type = G_RECT;
+		//vertices = malloc(type * sizeof(Point2d));
+		vertices.push_back(&lb);
+		vertices.push_back(&lt);
+		vertices.push_back(&rt);
+		vertices.push_back(&rb);
 		return *this;
 	}
 
-	int GetWidth() { return this->RB.x - this->LT.x; };
-	int GetHeight() { return this->RB.y - this->LT.y; };
-	bool Collision(Point2d p) override { return (p.x >= LT.x && p.x <= RB.x && p.y >= LT.y && p.y <= RB.y); }
+	int GetWidth() { return this->rb.x - this->lt.x; };
+	int GetHeight() { return this->rb.y - this->lt.y; };
+	bool Collision(Point2d p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
 };
 
 class Quad : public Geometry {
 	Point2d a, b, c, d;
 
-	bool Collision(Point2d p) override { return false; }
+	bool Collision(Point2d p) { return false; }
 };
 
 class Circle : public Geometry {
 	Point2d c;
 	uint16_t r = 0;
 
-	bool Collision(Point2d p) override { return c.Displacement(p) <= r; }
-};
-
-class AABB : public Geometry {
-
-public:
-	Point2d LT, RB;
-
-	//AABB() {};
-	//AABB(Point p_a, Point p_b) { LT = p_a; RB = p_b; };
-	//AABB(Rect rect) { LT = Point(rect.left, rect.top); RB = Point(rect.right, rect.bottom); };
-
-	//AABB& operator = (Rect const& obj) {
-	//	LT = Point(obj.left, obj.top);
-	//	RB = Point(obj.right, obj.bottom);
-	//	return *this;
-	//}
-
-	//bool Collision(Point p) {
-	//	if (p.x >= LT.x && p.x < RB.x && p.y >= LT.y && p.y < RB.y)
-	//		return true;
-	//	return false;
-	//}
+	bool Collision(Point2d p) { return c.Displacement(p) <= r; }
 };
 
 #endif

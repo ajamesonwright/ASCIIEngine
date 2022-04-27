@@ -40,7 +40,7 @@ namespace main_window {
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
 	Ray2d camera;
-	std::vector<Geometry> geometry_queue;
+	std::vector<Geometry*> geometry_queue;
 
 	MSG event_message;
 
@@ -52,7 +52,8 @@ namespace main_window {
 
 	int GetCursorFocus(Point2d p);
 
-	uint32_t* FindMemoryHandle(std::vector<Point2d*> p_v);
+	//uint32_t* FindMemoryHandle(std::vector<Point2d*> p_v);
+	void* FindMemoryHandle(Geometry* g);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
