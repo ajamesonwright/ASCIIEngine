@@ -20,16 +20,17 @@ int Geometry::ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<P
 	size_t range_begin, range_end;
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
 
-	uint32_t compare_value = (compare[0] & compare_type) ? UINT32_MAX : 0;
+	uint32_t compare_value = ((compare[0] & compare_type) == 1) ? 0 : UINT32_MAX;
 	size_t index = -1;
 	uint32_t current;
 
 	begin == -1 ? range_begin = 0 : range_begin = begin;
 	end == -1 ? range_end = v->size() : range_end = end;
+	// Return the index of the first instance of the highest/lowest value of the vector passed
 	for (size_t i = range_begin; i < range_end; i++) {
 		Point2d p = *v->at(i);
-		current = (compare_type >> 1) * p.x + (compare_type >> 2) * p.y;
-		// Test teh selected coordinate value against the compare value
+		current = ((compare[1] & compare_type) >> 1) * p.x + ((compare[2] & compare_type) >> 2) * p.y;
+		// Test the selected coordinate value against the compare value
 		if (((compare[0] & compare_type) && current > compare_value) || (!(compare[0] & compare_type) && current < compare_value)) {
 			compare_value = current;
 			index = i;
@@ -44,22 +45,18 @@ int Geometry::ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Po
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
 
 	uint32_t compare_value[2] = { 0 };
-	compare_value[0] = (compare[1] & compare_type) * p1->x + (compare[2] & compare_type) * p1->y;
-	compare_value[1] = (compare[1] & compare_type) * p2->x + (compare[2] & compare_type) * p2->y;
+	compare_value[0] = ((compare[1] & compare_type) >> 1) * p1->x + ((compare[2] & compare_type) >> 2) * p1->y;
+	compare_value[1] = ((compare[1] & compare_type) >> 1) * p2->x + ((compare[2] & compare_type) >> 2) * p2->y;
 
 	int index = -1;
+	if (compare_value[0] == compare_value[1]) return index;
+
+	// implement a binary int return type and use a mask to decode? may eliminate ties for priority
 	if (compare[0] & compare_type) {
-		(compare_value[0] >= compare_value[1]) ? index = 0 : index = 1;
+		(compare_value[0] > compare_value[1]) ? index = 0 : index = 1;
 	} else {
-		(compare_value[0] <= compare_value[1]) ? index = 0 : index = 1;
+		(compare_value[0] < compare_value[1]) ? index = 0 : index = 1;
 	}
 
 	return index;
 }
-
-//void Geometry::SwapPoint(Point2d& p1, Point2d& p2) {
-//	Point2d* temp;
-//	temp = &p1;
-//	p1 = p2;
-//	p2 = *temp;
-//}

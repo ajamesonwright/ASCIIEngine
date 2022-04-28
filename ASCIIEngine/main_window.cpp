@@ -213,12 +213,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::camera.SetSize(30);
 	}
 	
-	Point2d p1 = Point2d(300, 200);
-	Point2d p2 = Point2d(100, 500);
-	Line l = Line(p1, p2);
-	l.SetHandle(MW::FindMemoryHandle(&l));
-	bool switched = false;
-	MW::geometry_queue.push_back(&l);
+			// Testing for basic update render functions
+			{
+				Point2d p1 = Point2d(100, 500);
+				Point2d p2 = Point2d(300, 200);
+				Line l = Line(p1, p2);
+				MW::geometry_queue.push_back(&l);
+
+				Point2d p3 = Point2d(400, 300);
+				Point2d p4 = Point2d(450, 500);
+				Point2d p5 = Point2d(700, 200);
+				Tri t = Tri(p3, p4, p5);
+				MW::geometry_queue.push_back(&t);
+			}
 
 	// Message loop
 	while (MW::GetRunningState()) {
@@ -237,17 +244,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::GetRenderer()->GetFocusLock() == 0) {
 			MW::GetRenderer()->ClearRenderArea(true);
 			MW::GetRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
-
-			if (!switched) {
-				
-				std::swap(l.left, l.right);
-				switched = true;
-			}
 		}
-		//MW::GetRenderer()->UpdateRenderArea(l, Renderer::TOP_DOWN);
 		MW::GetRenderer()->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
 		for (int i = 0; i < MW::geometry_queue.size(); i++) {
-			MW::GetRenderer()->UpdateRenderArea(MW::geometry_queue.at(i), Renderer::TOP_DOWN);
+			MW::GetRenderer()->UpdateRenderArea(*MW::geometry_queue.at(i), Renderer::TOP_DOWN);
 		}
 		// Draw updated RenderArea to screen
 		MW::GetRenderer()->DrawRenderArea(hdc);

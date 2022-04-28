@@ -90,21 +90,34 @@ void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid)
 	UpdateRenderArea(right_edge, panel, colour, true);
 }
 
-void Renderer::UpdateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
+void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool valid) {
 
-	switch (g->type) {
+	switch (g.type) {
 	case Geometry::G_LINE:
 	{
-		//Line l = Line(g);
-		UpdateRenderArea(static_cast<Line>(*g), 0);
-	}
+		UpdateRenderArea(static_cast<Line>(g), 0);
+	} break;
+	case Geometry::G_TRI:
+	{
+		Line l0 = Line(*g.vertices.at(0), *g.vertices.at(1));
+		Line l1 = Line(*g.vertices.at(1), *g.vertices.at(2));
+		Line l2 = Line(*g.vertices.at(2), *g.vertices.at(0));
+		UpdateRenderArea(l0, panel, colour, valid);
+		UpdateRenderArea(l1, panel, colour, valid);
+		UpdateRenderArea(l2, panel, colour, valid);
+		//UpdateRenderArea(static_cast<Tri>(g), 0);
+	} break;
+	case Geometry::G_RECT:
+	{
+		UpdateRenderArea(static_cast<Rect>(g), 0);
+	} break;
 	}
 }
 
 void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
 	
 	// trivial case
-	if (l.left == l.right)
+	if (l.vertices.at(0) == l.vertices.at(1))
 		return;
 	
 	if (!valid)
@@ -113,11 +126,11 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 			return;
 
 	// Special case for vertical lines
-	if (l.left.x == l.right.x) {
+	if (l.vertices.at(0)->x == l.vertices.at(1)->x) {
 		Point2d p;
-		l.left.y < l.right.y ? p = l.left : p = l.right;
+		l.vertices.at(0)->y < l.vertices.at(1)->y ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
 
-		int limit = abs((int)(l.left.y - l.right.y));
+		int limit = abs((int)(l.vertices.at(0)->y - l.vertices.at(1)->y));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			UpdateRenderArea(p, panel, colour, true);
@@ -126,11 +139,11 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 		return;
 	}
 	// Special case for horizontal lines
-	if (l.left.y == l.right.y) {
+	if (l.vertices.at(0)->y == l.vertices.at(1)->y) {
 		Point2d p;
-		l.left.x < l.right.x ? p = l.left : p = l.right;
+		l.vertices.at(0)->x < l.vertices.at(1)->x ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
 
-		int limit = abs((int)(l.left.x - l.right.x));
+		int limit = abs((int)(l.vertices.at(0)->x - l.vertices.at(1)->x));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			UpdateRenderArea(p, panel, colour, true);
@@ -140,10 +153,10 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 	}
 
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	if (abs((int)(l.right.y - l.left.y)) < abs((int)(l.right.x - l.left.x)))
-		l.left.x > l.right.x ? RenderLineLow(l.right, l.left, panel, colour, true) : RenderLineLow(l.left, l.right, panel, colour, true);
+	if (abs((int)(l.vertices.at(1)->y - l.vertices.at(0)->y)) < abs((int)(l.vertices.at(1)->x - l.vertices.at(0)->x)))
+		l.vertices.at(0)->x > l.vertices.at(1)->x ? RenderLineLow(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineLow(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 	else
-		l.left.y > l.right.y ? RenderLineHigh(l.right, l.left, panel, colour, true) : RenderLineHigh(l.left, l.right, panel, colour, true);
+		l.vertices.at(0)->y > l.vertices.at(1)->y ? RenderLineHigh(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineHigh(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 
 	draw_area_.update = true;
 }
@@ -392,7 +405,7 @@ bool Renderer::Validate(Ray2d r, int panel) {
 
 bool Renderer::Validate(Line l, int panel) {
 
-	return (Validate(l.left, panel) && Validate(l.right, panel));
+	return (Validate(*l.vertices.at(0), panel) && Validate(*l.vertices.at(1), panel));
 }
 
 bool Renderer::Validate(Rect rect, int panel) {
