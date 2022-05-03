@@ -72,8 +72,31 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			}
 			MW::SetRunningState(STOPPED);
 		} break;
+		default:
+		{
+			if (!MW::input_->input_state[ML_DOWN].held) {
+				switch (wParam) {
+				case 0x54: // T
+				{
+					MW::SetDrawMode(D_TRI);
+				} break;
+				case 0x52: // R
+				{
+					MW::SetDrawMode(D_RECT);
+				} break;
+				case 0x51: // Q
+				{
+					MW::SetDrawMode(D_QUAD);
+				} break;
+				case 0x43: // C
+				{
+					MW::SetDrawMode(D_CIRCLE);
+				} break;
+				}
+			}
 		}
-	}
+		}
+	} break;
 	case WM_MOUSEMOVE:
 	{
 		debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::MOUSE_POSITION, &MW::event_message, MW::current_panel_);
@@ -128,23 +151,20 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			MW::geo_end = MW::event_message.pt;
 
 			if (MW::geo_start.Displacement(MW::geo_end) > 10) {
-				// a few loop iterations after the first rect is created, the data is cleared out because it is no longer used, which causes the object in the vector to change accordingly!!!
-				Rect rect = Rect(MW::geo_start, MW::geo_end);
+				Rect* rect = new Rect(MW::geo_start, MW::geo_end);
 
-				// geo_start is initialized to 0, 0 but never properly set before the displacement measurement is made on lbuttonup
-				MW::geometry_queue.push_back(&rect);
-				//MW::GetRenderer()->UpdateRenderArea(rect, Renderer::TOP_DOWN, 0xff0000, false);
+				debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::GEO_QUEUE_MOD, &MW::event_message, MW::current_panel_, 1, rect);
+				MW::geometry_queue.push_back(rect);
 				MW::geo_start = Point2d();
 				MW::geo_end = Point2d();
 			}
 		}
-		
 	} break;
 	case WM_RBUTTONUP:
 	{
-
+		//debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_);
 		if (MW::geometry_queue.size() > 0) {
-			debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_, 0, MW::geometry_queue.back());
+			debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::GEO_QUEUE_MOD, &MW::event_message, MW::current_panel_, 0, MW::geometry_queue.back());
 			MW::geometry_queue.pop_back();
 			MW::GetRenderer()->GetDrawArea()->update = true;
 		}
@@ -160,6 +180,9 @@ static void CleanUp() {
 	MW::GetRenderer()->CleanUp();
 	delete MW::GetRenderer();
 	delete MW::input_;
+	for (int i = 0; i < MW::geometry_queue.size(); i++) {
+		delete MW::geometry_queue.at(i);
+	}
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -231,17 +254,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Testing for basic update render functions
 	Point2d p1 = Point2d(100, 500);
 	Point2d p2 = Point2d(300, 200);
-	Line l = Line(p1, p2);
-	MW::geometry_queue.push_back(&l);
+	Line* l = new Line(p1, p2);
+	MW::geometry_queue.push_back(l);
 				
 	Point2d p3 = Point2d(400, 300);
 	Point2d p4 = Point2d(450, 500);
 	Point2d p5 = Point2d(700, 200);
-	Tri t = Tri(p3, p4, p5);
-	MW::geometry_queue.push_back(&t);
+	Tri* t = new Tri(p3, p4, p5);
+	MW::geometry_queue.push_back(t);
 	// when using the brackets to establish scope around the temp geo queue objects, the objects were deleted after leaving scope, thereby leaving no information to pass the to renderer
-
-
 
 	// Program loop
 	while (MW::GetRunningState()) {
@@ -289,14 +310,23 @@ bool main_window::GetRunningState() {
 }
 
 void main_window::SetRunningState(int p_run_state) {
-	if (p_run_state == (int) MW::GetRunningState())
-	{
+	if (p_run_state == MW::run_state_)
 		return;
-	}
-	if (p_run_state != 0 && p_run_state != 1) {
+	if (p_run_state != 0 && p_run_state != 1)
 		return;
-	}
+
 	MW::run_state_ = p_run_state;
+}
+
+void main_window::SetDrawMode(int p_draw_mode) {
+
+	debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_);
+	if (p_draw_mode == MW::draw_mode_)
+		return;
+	if (p_draw_mode != D_TRI && p_draw_mode != D_RECT && p_draw_mode != D_QUAD && p_draw_mode != D_CIRCLE)
+		return;
+
+	MW::draw_mode_ = p_draw_mode;
 }
 
 int main_window::GetCursorFocus(Point2d p) {

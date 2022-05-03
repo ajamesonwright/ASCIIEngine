@@ -72,10 +72,11 @@ public:
 	void UpdateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
 	void UpdateRenderArea(Ray2d r, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void UpdateRenderArea(Geometry g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
 	void RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
 	void RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void UpdateRenderArea(Rect p_r, int panel, uint32_t colour = 0x333333, bool valid = false);
+	void UpdateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
+	void UpdateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
 	void UpdateGeometry();
 	void DrawRenderArea(HDC hdc);
 	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);

@@ -17,6 +17,7 @@ namespace main_window {
 
 	// execution state
 	int run_state_;
+	int draw_mode_;
 
 	// current mouseover panel
 	int current_panel_ = -1;
@@ -50,9 +51,10 @@ namespace main_window {
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
 
+	void SetDrawMode(int p_draw_mode);
+
 	int GetCursorFocus(Point2d p);
 
-	//uint32_t* FindMemoryHandle(std::vector<Point2d*> p_v);
 	void* FindMemoryHandle(Geometry* g);
 
 	void SetWindowHeight(uint16_t p_height);
@@ -77,9 +79,18 @@ namespace main_window {
 	void ConditionMouseCoords(POINT& p);
 };
 
-enum {
+enum run_state {
 	STOPPED,
 	RUNNING,
+};
+
+enum draw_mode {
+	D_TRI,
+	D_RECT,
+	D_QUAD,
+	D_CIRCLE,
+	
+	D_DRAW_MODE_SIZE,
 };
 
 #endif

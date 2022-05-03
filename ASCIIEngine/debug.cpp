@@ -37,9 +37,6 @@ void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel
 		mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + ToString(msg->pt) + TAB + "panel: " + std::to_string(panel_id) + "\n";
 	}
 	if (debug_type == INPUT_DETECTED) {
-		if (obj)
-			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + std::to_string(msg->message) + " -> " + obj->GeometryTypeString() + " removed\n";
-		else 
 			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + std::to_string(msg->message) + "\n";
 	}
 	if (debug_type == PANEL_LOCK) {
@@ -49,7 +46,14 @@ void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel
 			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + " UNLOCKED \t ID: " + std::to_string(locked_panel) + "\n";
 	}
 	if (debug_type == GEO_QUEUE_MOD) {
-		mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + obj->GeometryTypeString() + " added to queue\n";
+		if (obj) {
+			if (locked_panel)
+				mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + obj->GeometryTypeString() + " added to queue\n";
+			else
+				mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + obj->GeometryTypeString() + " removed from queue\n";
+		}
+		else
+			mp += "Error: object not found.\n";
 	}
 
 	std::wstring stemp = std::wstring(mp.begin(), mp.end());

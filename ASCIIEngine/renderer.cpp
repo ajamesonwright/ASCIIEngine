@@ -207,6 +207,10 @@ void Renderer::RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour
 	}
 }
 
+void Renderer::UpdateRenderArea(Tri p_tri, int panel, uint32_t colour, bool valid) {
+
+}
+
 void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
 	if (!valid)
