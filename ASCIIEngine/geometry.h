@@ -77,7 +77,14 @@ public:
 	std::vector<Point2d*> vertices;
 
 	Geometry() { type = -1; };
-	Geometry(const Geometry& orig) { type = orig.type; vertices = orig.vertices; };
+	Geometry(int p_type) { type = p_type; };
+	Geometry(const Geometry& orig) {
+
+		type = orig.type; 
+		for (int i = 0; i < orig.vertices.size(); i++) {
+			vertices.push_back(orig.vertices[i]);
+		}
+	};
 
 	enum geometry_type {
 		G_LINE,
@@ -99,10 +106,25 @@ private:
 class Line : public Geometry {
 
 public:
-	Line() {};
-	Line(const Line& orig) { type = orig.type; vertices = orig.vertices; };
-	Line(const Geometry& orig) { if (orig.vertices.size() != 2) return; type = orig.type; vertices = orig.vertices; };
-	Line(Point2d a, Point2d b) {
+	Line() : Geometry(G_LINE) {};
+	Line(const Line& orig) {
+
+		type = orig.type;
+		vertices.clear();
+		vertices.push_back(orig.vertices[0]);
+		vertices.push_back(orig.vertices[1]);
+	};
+	Line(const Geometry& orig) {
+
+		if (orig.type != G_LINE || orig.vertices.size() != 2)
+			return;
+		type = orig.type;
+		vertices.clear();
+		vertices.push_back(orig.vertices[0]);
+		vertices.push_back(orig.vertices[1]);
+	};
+	Line(Point2d a, Point2d b) : Geometry(G_LINE) {
+
 		if (a == b)
 			return;
 
@@ -111,6 +133,7 @@ public:
 		
 		type = G_LINE;
 
+		vertices.clear();
 		if (index_y != -1) {
 			if (index_y == 0) {
 				vertices.push_back(&a);
@@ -138,11 +161,25 @@ public:
 class Tri : public Geometry {
 
 public:
-	Tri() {};
-	Tri(const Tri& orig) { type = orig.type; vertices = orig.vertices; };
-	Tri(const Geometry& orig) { if (orig.vertices.size() != 3) return; type = orig.type; vertices = orig.vertices; };
-	Tri(Point2d a, Point2d b, Point2d c) {
-		type = G_TRI;
+	Tri() : Geometry(G_TRI) {};
+	Tri(const Tri& orig) : Geometry(G_TRI) {
+
+		type = orig.type;
+		for (int i = 0; i < orig.vertices.size(); i++) {
+			vertices.push_back(orig.vertices[i]);
+		}
+	};
+	Tri(const Geometry& orig) {
+
+		if (orig.type != G_TRI || orig.vertices.size() != 3)
+			return;
+
+		type = orig.type;
+		for (int i = 0; i < orig.vertices.size(); i++) {
+			vertices.push_back(orig.vertices[i]);
+		}
+	};
+	Tri(Point2d a, Point2d b, Point2d c) : Geometry(G_TRI) {
 
 		vertices.push_back(&a); vertices.push_back(&b); vertices.push_back(&c);
 		int index = ComparePointsByCoordinate(0b101, &vertices);
@@ -164,30 +201,74 @@ public:
 	Point2d lt, rb;
 	Point2d lb, rt;
 
-	Rect() { lt = Point2d(); rb = Point2d(); lb = Point2d(); rt = Point2d(); };
-	Rect(const Rect& orig) { if (orig.vertices.size() != 4) return; lt = orig.lt; rb = orig.rb; lb = orig.lb; rt = orig.rt; type = orig.type; vertices = orig.vertices; };
-	Rect(const Geometry& orig) {
+	Rect() : Geometry(G_RECT) { lt = Point2d(); rb = Point2d(); lb = Point2d(); rt = Point2d(); vertices.clear(); };
+	Rect(const Rect& orig) {
+
+		if (orig.vertices.size() != 4)
+			return;
+
 		type = orig.type;
-		vertices = orig.vertices;
+		vertices.clear();
+		for (int i = 0; i < orig.vertices.size(); i++) {
+			vertices.push_back(orig.vertices[i]);
+		}
+		lt = orig.lt;
+		rb = orig.rb;
+		lb = orig.lb;
+		rt = orig.rt;
+	}
+	Rect(const Geometry& orig) {
+
+		if (orig.type != G_RECT || orig.vertices.size() != 4)
+			return;
+
+		type = orig.type;
+		vertices.clear();
+		for (int i = 0; i < orig.vertices.size(); i++) {
+			vertices.push_back(orig.vertices[i]);
+		}
 		lb = *vertices.at(0); // Ordering of pairs is enforced from creation by points, therefore existing pattern can be used to determine order instead of testing
 		lt = *vertices.at(1);
 		rt = *vertices.at(2);
 		rb = *vertices.at(3);
 	};
-	Rect(Point2d a, Point2d b) {
+	Rect(Point2d a, Point2d b) : Geometry(G_RECT) {
+
 		type = G_RECT;
 
-		lt = Point2d(min(a.x, b.x), min(a.y, b.y));
-		rb = Point2d(max(a.x, b.x), max(a.y, b.y));
 		lb = Point2d(min(a.x, b.x), max(a.y, b.y));
+		lt = Point2d(min(a.x, b.x), min(a.y, b.y));
 		rt = Point2d(max(a.x, b.x), min(a.y, b.y));
+		rb = Point2d(max(a.x, b.x), max(a.y, b.y));
+		vertices.clear();
 		vertices.push_back(&lb);
 		vertices.push_back(&lt);
 		vertices.push_back(&rt);
 		vertices.push_back(&rb);
 	};
-	Rect(RECT rect) { lt = Point2d(rect.left, rect.top); rb = Point2d(rect.right, rect.bottom); lb = Point2d(rect.left, rect.bottom); rt = Point2d(rect.right, rect.top); };
-	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) { lt = Point2d(left, top); rb = Point2d(right, bottom); lb = Point2d(left, bottom); rt = Point2d(right, top);
+	Rect(RECT rect) : Geometry(G_RECT) {
+
+		lb = Point2d(rect.left, rect.bottom);
+		lt = Point2d(rect.left, rect.top);
+		rt = Point2d(rect.right, rect.top); 
+		rb = Point2d(rect.right, rect.bottom);
+		vertices.clear();
+		vertices.push_back(&lb);
+		vertices.push_back(&lt);
+		vertices.push_back(&rt);
+		vertices.push_back(&rb);		
+	};
+	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) : Geometry(G_RECT) {
+				
+		lb = Point2d(left, bottom); 
+		lt = Point2d(left, top); 
+		rt = Point2d(right, top);
+		rb = Point2d(right, bottom);
+		vertices.clear();
+		vertices.push_back(&lb);
+		vertices.push_back(&lt);
+		vertices.push_back(&rt);
+		vertices.push_back(&rb);
 	};
 
 	int GetWidth() { return this->rb.x - this->lt.x; };

@@ -213,19 +213,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::camera.SetSize(30);
 	}
 	
-			// Testing for basic update render functions
-			{
-				Point2d p1 = Point2d(100, 500);
-				Point2d p2 = Point2d(300, 200);
-				Line l = Line(p1, p2);
-				MW::geometry_queue.push_back(&l);
+	// Testing for basic update render functions
+	Point2d p1 = Point2d(100, 500);
+	Point2d p2 = Point2d(300, 200);
+	Line l = Line(p1, p2);
+	MW::geometry_queue.push_back(&l);
+				
+	Point2d p3 = Point2d(400, 300);
+	Point2d p4 = Point2d(450, 500);
+	Point2d p5 = Point2d(700, 200);
+	Tri t = Tri(p3, p4, p5);
+	MW::geometry_queue.push_back(&t);
+	// when using the brackets to establish scope around the temp geo queue objects, the objects were deleted after leaving scope, thereby leaving no information to pass the to renderer
 
-				Point2d p3 = Point2d(400, 300);
-				Point2d p4 = Point2d(450, 500);
-				Point2d p5 = Point2d(700, 200);
-				Tri t = Tri(p3, p4, p5);
-				MW::geometry_queue.push_back(&t);
-			}
+
 
 	// Message loop
 	while (MW::GetRunningState()) {
@@ -247,7 +248,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 		MW::GetRenderer()->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
 		for (int i = 0; i < MW::geometry_queue.size(); i++) {
-			MW::GetRenderer()->UpdateRenderArea(*MW::geometry_queue.at(i), Renderer::TOP_DOWN);
+			MW::GetRenderer()->UpdateRenderArea(*MW::geometry_queue[i], Renderer::TOP_DOWN);
 		}
 		// Draw updated RenderArea to screen
 		MW::GetRenderer()->DrawRenderArea(hdc);
@@ -365,10 +366,6 @@ void main_window::SetDrawRect(HWND hwnd, Rect* rect) {
 	RECT dr;
 	GetClientRect(hwnd, &dr);
 	MW::draw_rect = dr;
-	/*MW::draw_rect.left = temp_dr.left;
-	MW::draw_rect.top = temp_dr.top;
-	MW::draw_rect.right = temp_dr.right;
-	MW::draw_rect.bottom = temp_dr.bottom;*/
 }
 
 void main_window::ConditionMouseCoords(Point2d& p) {
@@ -380,7 +377,6 @@ void main_window::ConditionMouseCoords(Point2d& p) {
 }
 
 void main_window::ConditionMouseCoords(POINT& p) {
-	// likely needs to be updated to include panel detection
 
 	// condition mouse cursor coordinates to be within range
 	// 30 pixels is fixed for Y dimension due to title bar

@@ -116,6 +116,9 @@ void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool val
 
 void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
 	
+	// null case
+	if (l.vertices.size() < 2)
+		return;
 	// trivial case
 	if (l.vertices.at(0) == l.vertices.at(1))
 		return;
