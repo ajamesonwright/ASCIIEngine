@@ -4,6 +4,8 @@
 #include <Windows.h>
 #include <stdint.h>
 #include <vector>
+#include <string>
+#include "debug.h"
 
 class Point2d {
 
@@ -80,7 +82,8 @@ public:
 	Geometry(int p_type) { type = p_type; };
 	Geometry(const Geometry& orig) {
 
-		type = orig.type; 
+		type = orig.type;
+		vertices.clear();
 		for (int i = 0; i < orig.vertices.size(); i++) {
 			vertices.push_back(orig.vertices[i]);
 		}
@@ -94,6 +97,31 @@ public:
 		G_CIRCLE,
 
 		G_NUM_TYPES,
+	};
+
+	std::string GeometryTypeString() {
+		switch (type) {
+		case 0:
+		{
+			return "LINE";
+		} break;
+		case 1:
+		{
+			return "TRI";
+		} break;
+		case 2:
+		{
+			return "RECT";
+		} break;
+		case 3:
+		{
+			return "QUAD";
+		} break;
+		case 4:
+		{
+			return "CIRCLE";
+		} break;
+		}
 	};
 	
 protected:
@@ -131,8 +159,6 @@ public:
 		int index_y = ComparePointsByCoordinate(0b101, nullptr, &a, &b);
 		int index_x = ComparePointsByCoordinate(0b10, nullptr, &a, &b);
 		
-		type = G_LINE;
-
 		vertices.clear();
 		if (index_y != -1) {
 			if (index_y == 0) {
@@ -165,6 +191,7 @@ public:
 	Tri(const Tri& orig) : Geometry(G_TRI) {
 
 		type = orig.type;
+		vertices.clear();
 		for (int i = 0; i < orig.vertices.size(); i++) {
 			vertices.push_back(orig.vertices[i]);
 		}
@@ -175,12 +202,14 @@ public:
 			return;
 
 		type = orig.type;
+		vertices.clear();
 		for (int i = 0; i < orig.vertices.size(); i++) {
 			vertices.push_back(orig.vertices[i]);
 		}
 	};
 	Tri(Point2d a, Point2d b, Point2d c) : Geometry(G_TRI) {
 
+		vertices.clear();
 		vertices.push_back(&a); vertices.push_back(&b); vertices.push_back(&c);
 		int index = ComparePointsByCoordinate(0b101, &vertices);
 		if (index != 0)
@@ -234,8 +263,6 @@ public:
 	};
 	Rect(Point2d a, Point2d b) : Geometry(G_RECT) {
 
-		type = G_RECT;
-
 		lb = Point2d(min(a.x, b.x), max(a.y, b.y));
 		lt = Point2d(min(a.x, b.x), min(a.y, b.y));
 		rt = Point2d(max(a.x, b.x), min(a.y, b.y));
@@ -281,8 +308,7 @@ class Quad : public Geometry {
 	Quad() {};
 	Quad(const Quad& orig) { type = orig.type; vertices = orig.vertices; };
 	Quad(const Geometry& orig) { type = orig.type; vertices = orig.vertices; };
-	Quad(Point2d a, Point2d b, Point2d c, Point2d d) {
-		type = G_QUAD;
+	Quad(Point2d a, Point2d b, Point2d c, Point2d d) : Geometry(G_QUAD) {
 
 
 	}

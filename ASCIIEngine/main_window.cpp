@@ -108,32 +108,47 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 		if (MW::GetRenderer()->GetFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
 			MW::geo_start = MW::event_message.pt;
-			MW::input_->input[Input::ML_DOWN].held = true;
-			MW::input_->input[Input::ML_DOWN].update = true;
+			MW::input_->input_state[ML_DOWN].held = true;
+			MW::input_->input_state[ML_DOWN].update = true;
 		}
 	} break;
 	case WM_LBUTTONUP:
 	{
 		debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_);
 
-		// Clear held for each button up message
-		MW::input_->input[Input::ML_DOWN].held = false;
-		MW::input_->input[Input::ML_DOWN].update = true;
+		if (MW::input_->input_state[ML_DOWN].held) {
+			// Clear held for each button up message if it qualified as 'click and drag' action
+			MW::input_->input_state[ML_DOWN].held = false;
+			MW::input_->input_state[ML_DOWN].update = true;
+		} else
+			break;
 
 		// Check for focus lock before calculating square end point
-		if (MW::GetRenderer()->GetFocusLock() != -1) {
+		if (MW::GetRenderer()->GetFocusLock() != -1 && !MW::input_->input_state[ML_DOWN].held) {
 			MW::geo_end = MW::event_message.pt;
+
+			if (MW::geo_start.Displacement(MW::geo_end) > 10) {
+				// a few loop iterations after the first rect is created, the data is cleared out because it is no longer used, which causes the object in the vector to change accordingly!!!
+				Rect rect = Rect(MW::geo_start, MW::geo_end);
+
+				// geo_start is initialized to 0, 0 but never properly set before the displacement measurement is made on lbuttonup
+				MW::geometry_queue.push_back(&rect);
+				//MW::GetRenderer()->UpdateRenderArea(rect, Renderer::TOP_DOWN, 0xff0000, false);
+				MW::geo_start = Point2d();
+				MW::geo_end = Point2d();
+			}
 		}
-		if (MW::geo_start.Displacement(MW::geo_end) > 10) {
-			Rect rect = Rect(MW::geo_start, MW::geo_end);
-			std::vector<Point2d*> v; v.push_back(&MW::geo_start); v.push_back(&MW::geo_end);
-			//uint32_t* handle = MW::FindMemoryHandle(v);
-			//Geometry::GeometryData gd = Geometry::GeometryData(MW::GetRenderer()->GetMemoryLocation(Renderer::TOP_DOWN, Point2d(min(MW::geo_start.x, MW::geo_end.x), max(MW::geo_start.y, MW::geo_end.y))), );
-			//MW::geometry_queue.push_back(rect);
-			MW::GetRenderer()->UpdateRenderArea(rect, Renderer::TOP_DOWN, 0xff0000, false);
-			MW::geo_start = Point2d();
-			MW::geo_end = Point2d();
+		
+	} break;
+	case WM_RBUTTONUP:
+	{
+
+		if (MW::geometry_queue.size() > 0) {
+			debug::PrintDebugMsg(calling_class::MAIN_WINDOW, debug_type::INPUT_DETECTED, &MW::event_message, MW::current_panel_, 0, MW::geometry_queue.back());
+			MW::geometry_queue.pop_back();
+			MW::GetRenderer()->GetDrawArea()->update = true;
 		}
+		MW::GetRenderer()->ClearRenderArea();
 	} break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
@@ -228,11 +243,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 
 
-	// Message loop
+	// Program loop
 	while (MW::GetRunningState()) {
-		for (int i = 0; i < Input::KEY_SIZE; i++) {
-			MW::input_->input[i].update = false;
+		// Reset inputs
+		for (int i = 0; i < KEY_SIZE; i++) {
+			MW::input_->input_state[i].update = false;
 		}
+		// Main message loop
 		while (PeekMessage(&MW::event_message, hwnd, 0, 0, PM_REMOVE)) {
 			// Update panel under mouseover for highlight
 			MW::ConditionMouseCoords(MW::event_message.pt);
@@ -241,11 +258,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			TranslateMessage(&MW::event_message);
 			DispatchMessage(&MW::event_message);
 		}
-
+		// Draw highlight line
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::GetRenderer()->GetFocusLock() == 0) {
 			MW::GetRenderer()->ClearRenderArea(true);
 			MW::GetRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
+		// Draw geometry queue from front to back
 		MW::GetRenderer()->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
 		for (int i = 0; i < MW::geometry_queue.size(); i++) {
 			MW::GetRenderer()->UpdateRenderArea(*MW::geometry_queue[i], Renderer::TOP_DOWN);

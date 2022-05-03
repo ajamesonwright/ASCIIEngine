@@ -1,14 +1,15 @@
 #include "debug.h"
+#include "geometry.h"
 
 // print flag to toggle all debug printing
-bool print = false;
+bool print = true;
 
 std::string calling_classes[calling_class::CLASS_SIZE] = { "main_window", "renderer", "geometry" };
-std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "input_detected", "panel_lock" };
+std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "input_detected", "panel_lock", "geo_queue" };
 #define TAB ":\t"
 #define DTAB ":\t\t"
 
-void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel) {
+void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel, Geometry* obj) {
 
 	if (!print)
 		return;
@@ -36,13 +37,19 @@ void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel
 		mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + ToString(msg->pt) + TAB + "panel: " + std::to_string(panel_id) + "\n";
 	}
 	if (debug_type == INPUT_DETECTED) {
-		mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + std::to_string(msg->message) + "\n";
+		if (obj)
+			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + std::to_string(msg->message) + " -> " + obj->GeometryTypeString() + " removed\n";
+		else 
+			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + std::to_string(msg->message) + "\n";
 	}
 	if (debug_type == PANEL_LOCK) {
 		if (locked_panel == -1 && panel_id != -1)
 			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + " LOCKED \t ID: " + std::to_string(panel_id) + "\n";
 		else
 			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + " UNLOCKED \t ID: " + std::to_string(locked_panel) + "\n";
+	}
+	if (debug_type == GEO_QUEUE_MOD) {
+		mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + obj->GeometryTypeString() + " added to queue\n";
 	}
 
 	std::wstring stemp = std::wstring(mp.begin(), mp.end());
