@@ -50,10 +50,10 @@ namespace main_window {
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
-
 	void SetDrawMode(int p_draw_mode);
-
 	int GetCursorFocus(Point2d p);
+
+	void SimulateFrame(float s_per_frame);
 
 	void* FindMemoryHandle(Geometry* g);
 
@@ -85,6 +85,7 @@ enum run_state {
 };
 
 enum draw_mode {
+	D_LINE,
 	D_TRI,
 	D_RECT,
 	D_QUAD,

@@ -60,3 +60,46 @@ int Geometry::ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Po
 
 	return index;
 }
+
+bool Geometry::CompareBySlope(float f1, float f2) {
+	// return indicates if floats are in their correct positions in vector
+	if (f1 < 0) {
+		if (f2 < 0)
+			return f1 > f2;
+		else if (f2 > 0)
+			return true;
+		return true;
+
+	}
+
+	return false;
+}
+
+std::vector<float> Geometry::CalculateSlopes(std::vector<Point2d*> v_g) {
+	uint32_t diff_x, diff_y;
+	std::vector<float> v_f;
+	
+	for (int i = 1; i < v_g.size(); i++) {
+		diff_x = v_g[i]->x - v_g[0]->x;
+		diff_y = v_g[i]->y - v_g[0]->y;
+		if (diff_x == 0) {
+			v_f.push_back(1.0f);
+			continue;
+		}
+		v_f.push_back((float)diff_y / diff_x);
+	}
+	return v_f;
+}
+
+void Geometry::SortBySlope(std::vector<Point2d*>& vertices, std::vector<float> slopes) {
+	// sort by least negative -> most negative -> 1 -> most positive -> least positive to enforce clockwise traversal of vertices
+	for (int i = 0; i < slopes.size() - 1; i++) {
+		// both less than zero
+		if (slopes[i] < 0 && slopes[i + 1] < 0) {
+			if (slopes[i] < slopes[i + 1])
+				std::swap(vertices[i + 1], vertices[i + 2]);
+		}
+
+		
+	}
+}

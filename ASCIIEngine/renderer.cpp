@@ -73,8 +73,8 @@ void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid)
 
 	// Draw main line
 	Point2d base, tip;
-	double cosx = cos(r.dir * M_PI / 180);
-	double siny = sin(r.dir * M_PI / 180);
+	double cosx = cos(r.direction * M_PI / 180);
+	double siny = sin(r.direction * M_PI / 180);
 	base = Point2d((uint32_t)(r.x - r.size * cosx / 2 + 0.5), (uint32_t)(r.y - r.size * siny / 2 + 0.5));
 	tip = Point2d((uint32_t)(r.x + r.size * cosx / 2 + 0.5), (uint32_t)(r.y + r.size * siny / 2 + 0.5));
 	Line main = Line(base, tip);
@@ -82,8 +82,8 @@ void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid)
 
 	// Draw edges of arrow
 	Point2d left, right;
-	left = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.dir + 180 - 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.dir + 180 - 135) * M_PI / 180) + 0.5));
-	right = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.dir + 180 + 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.dir + 180 + 135) * M_PI / 180) + 0.5));
+	left = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 - 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 - 135) * M_PI / 180) + 0.5));
+	right = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 + 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 + 135) * M_PI / 180) + 0.5));
 	Line left_edge = Line(tip, left);
 	Line right_edge = Line(tip, right);
 	UpdateRenderArea(left_edge, panel, colour, true);
@@ -263,10 +263,10 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	// clear entire buffer
 	if (panel == -1) {
 
-		for (int i = 0; i < draw_area_.height; i++) {
+		for (uint32_t i = 0; i < draw_area_.height; i++) {
 			pixel_count = 0;
 			width = 0;
-			for (int j = 0; j < draw_area_.width; j++) {
+			for (uint32_t j = 0; j < draw_area_.width; j++) {
 				// iterate over known width of draw panel instead of verifying collision again
 				if (pixel_count < width) {
 					pixel_count++;
@@ -323,8 +323,8 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 		}
 		}
 
-		for (int i = 0; i < (draw_area_.panels[panel].rb.y - draw_area_.panels[panel].lt.y); i++) {
-			for (int j = 0; j < (draw_area_.panels[panel].rb.x - draw_area_.panels[panel].lt.x); j++) {
+		for (uint32_t i = 0; i < (draw_area_.panels[panel].rb.y - draw_area_.panels[panel].lt.y); i++) {
+			for (uint32_t j = 0; j < (draw_area_.panels[panel].rb.x - draw_area_.panels[panel].lt.x); j++) {
 				*pixel++ = colour;
 			}
 			pixel += draw_area_.width - (draw_area_.panels[panel].rb.x - draw_area_.panels[panel].lt.x);
@@ -395,8 +395,8 @@ bool Renderer::Validate(Point2d p, int panel) {
 
 bool Renderer::Validate(Ray2d r, int panel) {
 	
-	double cosx = cos(r.dir * M_PI / 180);
-	double siny = sin(r.dir * M_PI / 180);
+	double cosx = cos(r.direction * M_PI / 180);
+	double siny = sin(r.direction * M_PI / 180);
 
 	if (panel == -1)
 		return (r.x - (r.size / 2 * cosx) >= 0
