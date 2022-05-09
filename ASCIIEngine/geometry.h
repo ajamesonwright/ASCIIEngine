@@ -280,25 +280,25 @@ class Quad : public Geometry {
 	};
 	Quad(Point2d a, Point2d b, Point2d c, Point2d d) : Geometry(G_QUAD) {
 
-		// USE CONVEX HULL APPROACH TO SORT POINTS
-		// FIND LOWEST Y COORD
-		// CALCULATE SLOPE OF LINE FROM THAT POINT TO EACH OTHER POINT AND SORT 
-		// should be sorted s.th. least negative -> most negative -> 1 -> most positive -> least positive
-		vertices.push_back(&a);
-		vertices.push_back(&b);
-		vertices.push_back(&c);
-		vertices.push_back(&d);
+		//// USE CONVEX HULL APPROACH TO SORT POINTS
+		//// FIND LOWEST Y COORD
+		//// CALCULATE SLOPE OF LINE FROM THAT POINT TO EACH OTHER POINT AND SORT 
+		//// should be sorted s.th. least negative -> most negative -> 1 -> most positive -> least positive
+		//vertices.push_back(&a);
+		//vertices.push_back(&b);
+		//vertices.push_back(&c);
+		//vertices.push_back(&d);
 
-		int index_y = ComparePointsByCoordinate(0b101, &vertices);
-		if (index_y != 0)
-			std::swap(*vertices.at(0), *vertices.at(index_y));
-		
-		std::vector<float> slope_vector = CalculateSlopes(vertices);
-		SortBySlope(vertices, slope_vector);
-		/*for (int i = 0; i < slope_vector.size() - 1; i++) {
-			if (slope_vector[i] < 0 && slope_vector[i+1] < 0)
-				slope_vector[i] < slope_vector[i+1] ? 
-		}*/
+		//int index_y = ComparePointsByCoordinate(0b101, &vertices);
+		//if (index_y != 0)
+		//	std::swap(*vertices.at(0), *vertices.at(index_y));
+		//
+		//std::vector<float> slope_vector = CalculateSlopes(vertices);
+		//SortBySlope(vertices, slope_vector);
+		///*for (int i = 0; i < slope_vector.size() - 1; i++) {
+		//	if (slope_vector[i] < 0 && slope_vector[i+1] < 0)
+		//		slope_vector[i] < slope_vector[i+1] ? 
+		//}*/
 	}
 
 	bool Collision(Point2d p) { return false; }
