@@ -17,6 +17,7 @@ namespace main_window {
 
 	// execution state
 	int run_state_;
+	int draw_mode_;
 
 	// current mouseover panel
 	int current_panel_ = -1;
@@ -40,7 +41,7 @@ namespace main_window {
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
 	Ray2d camera;
-	std::vector<Geometry> geometry_queue;
+	std::vector<Geometry*> geometry_queue;
 
 	MSG event_message;
 
@@ -49,10 +50,12 @@ namespace main_window {
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
-
+	void SetDrawMode(int p_draw_mode);
 	int GetCursorFocus(Point2d p);
 
-	uint32_t* FindMemoryHandle(std::vector<Point2d*> p_v);
+	void SimulateFrame(float s_per_frame);
+
+	void* FindMemoryHandle(Geometry* g);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
@@ -76,9 +79,19 @@ namespace main_window {
 	void ConditionMouseCoords(POINT& p);
 };
 
-enum {
+enum run_state {
 	STOPPED,
 	RUNNING,
+};
+
+enum draw_mode {
+	D_LINE,
+	D_TRI,
+	D_RECT,
+	D_QUAD,
+	D_CIRCLE,
+	
+	D_DRAW_MODE_SIZE,
 };
 
 #endif

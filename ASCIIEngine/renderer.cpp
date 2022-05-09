@@ -7,7 +7,7 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	instanced = true;
 
 	draw_area_ = DrawArea();
-	fov = 60;
+	this->fov = 60;
 }
 
 Renderer::DrawArea* Renderer::GetDrawArea() {
@@ -19,15 +19,15 @@ void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 	/*
 	* A draw_area_ object contains information regarding each panel that will be drawn to screen.
 	* draw_area_.panels[BACKGROUND] is the entire range of the client rect { 1604, 561 } zero indexed.
-	* draw_area_.panels[TOP_DOWN] is the range from:		LT = (dr.LT.x + BW, dr.LT.y + BW + 1)						BR = ((dr.LT.x + dr.RB.x) / 2 - BW, dr.RB.y - BW)
-	* draw_area_.panels[FIRST_PERSON] is the range from		LT = ((dr.LT.x + dr.RB.x) / 2 + BW, dr.LT.y + BW + 1)		BR = (dr.RB.x - BW, dr.RB.y - BW)
+	* draw_area_.panels[TOP_DOWN] is the range from:		lt = (dr.lt.x + BW, dr.lt.y + BW + 1)						BR = ((dr.lt.x + dr.rb.x) / 2 - BW, dr.rb.y - BW)
+	* draw_area_.panels[FIRST_PERSON] is the range from		lt = ((dr.lt.x + dr.rb.x) / 2 + BW, dr.lt.y + BW + 1)		BR = (dr.rb.x - BW, dr.rb.y - BW)
 	* Using WindowRect dimensions of 1620 by 800, yields total area of 1604W x 561H, zero indexed.
 	*/
 	Rect rect = *rect_inc;
 	uint32_t data_size = 0;
 
-	draw_area_.xPos = rect.LT.x;
-	draw_area_.yPos = rect.RB.y;
+	draw_area_.xPos = rect.lt.x;
+	draw_area_.yPos = rect.rb.y;
 	draw_area_.width = rect.GetWidth();
 	draw_area_.height = rect.GetHeight();
 
@@ -48,8 +48,8 @@ void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 
 	// Add 1 additional pixel to top point coordinate to make sure we're working with even numbers for height
-	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.LT.x + border_width, rect.LT.y + border_width + 1), Point2d(rect.GetWidth() / 2 - border_width, rect.RB.y - border_width));
-	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.GetWidth() / 2 + border_width, rect.LT.y + border_width + 1), Point2d(rect.RB.x - border_width, rect.RB.y - border_width));
+	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.lt.x + border_width, rect.lt.y + border_width + 1), Point2d(rect.GetWidth() / 2 - border_width, rect.rb.y - border_width));
+	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.GetWidth() / 2 + border_width, rect.lt.y + border_width + 1), Point2d(rect.rb.x - border_width, rect.rb.y - border_width));
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
@@ -73,27 +73,54 @@ void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid)
 
 	// Draw main line
 	Point2d base, tip;
-	float cosx = cos(r.dir * M_PI / 180);
-	float siny = sin(r.dir * M_PI / 180);
-	base = Point2d(r.x - r.size * cosx / 2, r.y - r.size * siny / 2);
-	tip = Point2d(r.x + r.size * cosx / 2, r.y + r.size * siny / 2);
+	double cosx = cos(r.direction * M_PI / 180);
+	double siny = sin(r.direction * M_PI / 180);
+	base = Point2d((uint32_t)(r.x - r.size * cosx / 2 + 0.5), (uint32_t)(r.y - r.size * siny / 2 + 0.5));
+	tip = Point2d((uint32_t)(r.x + r.size * cosx / 2 + 0.5), (uint32_t)(r.y + r.size * siny / 2 + 0.5));
 	Line main = Line(base, tip);
 	UpdateRenderArea(main, panel, colour, true);
 
 	// Draw edges of arrow
 	Point2d left, right;
-	left = Point2d(tip.x - 0.30 * r.size * cos((r.dir + 180 - 135) * M_PI / 180), tip.y - 0.30 * r.size * sin((r.dir + 180 - 135) * M_PI / 180));
-	right = Point2d(tip.x - 0.30 * r.size * cos((r.dir + 180 + 135) * M_PI / 180), tip.y - 0.30 * r.size * sin((r.dir + 180 + 135) * M_PI / 180));
+	left = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 - 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 - 135) * M_PI / 180) + 0.5));
+	right = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 + 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 + 135) * M_PI / 180) + 0.5));
 	Line left_edge = Line(tip, left);
 	Line right_edge = Line(tip, right);
 	UpdateRenderArea(left_edge, panel, colour, true);
 	UpdateRenderArea(right_edge, panel, colour, true);
 }
 
+void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool valid) {
+
+	switch (g.type) {
+	case Geometry::G_LINE:
+	{
+		UpdateRenderArea(static_cast<Line>(g), 0);
+	} break;
+	case Geometry::G_TRI:
+	{
+		Line l0 = Line(*g.vertices.at(0), *g.vertices.at(1));
+		Line l1 = Line(*g.vertices.at(1), *g.vertices.at(2));
+		Line l2 = Line(*g.vertices.at(2), *g.vertices.at(0));
+		UpdateRenderArea(l0, panel, colour, valid);
+		UpdateRenderArea(l1, panel, colour, valid);
+		UpdateRenderArea(l2, panel, colour, valid);
+		//UpdateRenderArea(static_cast<Tri>(g), 0);
+	} break;
+	case Geometry::G_RECT:
+	{
+		UpdateRenderArea(static_cast<Rect>(g), 0);
+	} break;
+	}
+}
+
 void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
 	
+	// null case
+	if (l.vertices.size() < 2)
+		return;
 	// trivial case
-	if (l.a == l.b)
+	if (l.vertices.at(0) == l.vertices.at(1))
 		return;
 	
 	if (!valid)
@@ -102,11 +129,11 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 			return;
 
 	// Special case for vertical lines
-	if (l.a.x == l.b.x) {
+	if (l.vertices.at(0)->x == l.vertices.at(1)->x) {
 		Point2d p;
-		l.a.y < l.b.y ? p = l.a : p = l.b;
+		l.vertices.at(0)->y < l.vertices.at(1)->y ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
 
-		int limit = abs((int)(l.a.y - l.b.y));
+		int limit = abs((int)(l.vertices.at(0)->y - l.vertices.at(1)->y));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			UpdateRenderArea(p, panel, colour, true);
@@ -115,11 +142,11 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 		return;
 	}
 	// Special case for horizontal lines
-	if (l.a.y == l.b.y) {
+	if (l.vertices.at(0)->y == l.vertices.at(1)->y) {
 		Point2d p;
-		l.a.x < l.b.x ? p = l.a : p = l.b;
+		l.vertices.at(0)->x < l.vertices.at(1)->x ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
 
-		int limit = abs((int)(l.a.x - l.b.x));
+		int limit = abs((int)(l.vertices.at(0)->x - l.vertices.at(1)->x));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			UpdateRenderArea(p, panel, colour, true);
@@ -129,10 +156,10 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 	}
 
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	if (abs((int)(l.b.y - l.a.y)) < abs((int)(l.b.x - l.a.x)))
-		l.a.x > l.b.x ? RenderLineLow(l.b, l.a, panel, colour, true) : RenderLineLow(l.a, l.b, panel, colour, true);
+	if (abs((int)(l.vertices.at(1)->y - l.vertices.at(0)->y)) < abs((int)(l.vertices.at(1)->x - l.vertices.at(0)->x)))
+		l.vertices.at(0)->x > l.vertices.at(1)->x ? RenderLineLow(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineLow(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 	else
-		l.a.y > l.b.y ? RenderLineHigh(l.b, l.a, panel, colour, true) : RenderLineHigh(l.a, l.b, panel, colour, true);
+		l.vertices.at(0)->y > l.vertices.at(1)->y ? RenderLineHigh(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineHigh(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 
 	draw_area_.update = true;
 }
@@ -180,6 +207,10 @@ void Renderer::RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour
 	}
 }
 
+void Renderer::UpdateRenderArea(Tri p_tri, int panel, uint32_t colour, bool valid) {
+
+}
+
 void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
 	if (!valid)
@@ -190,13 +221,13 @@ void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	// for now, assuming that no rasterization is required (all lines are horizontal or vertical)
 	Rect rect = p_rect;
 	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
-	Point2d p = { rect.LT.x, rect.RB.y };
-	for (int i = rect.RB.y; i >= rect.LT.y; i--) {
-		for (int j = rect.LT.x; j <= rect.RB.x; j++) {
+	Point2d p = { rect.lt.x, rect.rb.y };
+	for (uint32_t i = rect.rb.y; i >= rect.lt.y; i--) {
+		for (uint32_t j = rect.lt.x; j <= rect.rb.x; j++) {
 			UpdateRenderArea(p, panel, colour, true);
 			p.x++;
 		}
-		p.x = rect.LT.x;
+		p.x = rect.lt.x;
 		p.y--;
 	}
 
@@ -232,10 +263,10 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	// clear entire buffer
 	if (panel == -1) {
 
-		for (int i = 0; i < draw_area_.height; i++) {
+		for (uint32_t i = 0; i < draw_area_.height; i++) {
 			pixel_count = 0;
 			width = 0;
-			for (int j = 0; j < draw_area_.width; j++) {
+			for (uint32_t j = 0; j < draw_area_.width; j++) {
 				// iterate over known width of draw panel instead of verifying collision again
 				if (pixel_count < width) {
 					pixel_count++;
@@ -275,7 +306,7 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	}
 	// clear only the panel specified
 	else {
-		pixel += draw_area_.width * (draw_area_.panels[BACKGROUND].RB.y - draw_area_.panels[panel].RB.y) + (draw_area_.panels[panel].LT.x - draw_area_.panels[BACKGROUND].LT.x);
+		pixel += draw_area_.width * (draw_area_.panels[BACKGROUND].rb.y - draw_area_.panels[panel].rb.y) + (draw_area_.panels[panel].lt.x - draw_area_.panels[BACKGROUND].lt.x);
 
 		switch (panel) {
 		case TOP_DOWN:
@@ -292,11 +323,11 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 		}
 		}
 
-		for (int i = 0; i < (draw_area_.panels[panel].RB.y - draw_area_.panels[panel].LT.y); i++) {
-			for (int j = 0; j < (draw_area_.panels[panel].RB.x - draw_area_.panels[panel].LT.x); j++) {
+		for (uint32_t i = 0; i < (draw_area_.panels[panel].rb.y - draw_area_.panels[panel].lt.y); i++) {
+			for (uint32_t j = 0; j < (draw_area_.panels[panel].rb.x - draw_area_.panels[panel].lt.x); j++) {
 				*pixel++ = colour;
 			}
-			pixel += draw_area_.width - (draw_area_.panels[panel].RB.x - draw_area_.panels[panel].LT.x);
+			pixel += draw_area_.width - (draw_area_.panels[panel].rb.x - draw_area_.panels[panel].lt.x);
 		}
 	}
 
@@ -349,9 +380,9 @@ Point2d Renderer::Clamp(Point2d &p, Point2d max) {
 	return p;
 }
 
-uint32_t* Renderer::GetMemoryLocation(int panel, Point2d p) {
+void* Renderer::GetMemoryLocation(int panel, Point2d p) {
 
-	uint32_t* cursorMemoryLocation = (uint32_t*)draw_area_.data + p.x + p.y * draw_area_.width;
+	uint32_t* cursorMemoryLocation = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 	return cursorMemoryLocation;
 }
 
@@ -359,30 +390,34 @@ bool Renderer::Validate(Point2d p, int panel) {
 
 	if (panel == -1)
 		return (p.x >= 0 && p.x < draw_area_.width&& p.y >= 0 && p.y < draw_area_.height);
-	return (p.x >= draw_area_.panels[panel].LT.x && p.x < draw_area_.panels[panel].RB.x && p.y >= draw_area_.panels[panel].LT.y && p.y < draw_area_.panels[panel].RB.y);
+	return (p.x >= draw_area_.panels[panel].lt.x && p.x < draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y < draw_area_.panels[panel].rb.y);
 }
 
 bool Renderer::Validate(Ray2d r, int panel) {
 	
-	float cosx = cos(r.dir * M_PI / 180);
-	float siny = sin(r.dir * M_PI / 180);
+	double cosx = cos(r.direction * M_PI / 180);
+	double siny = sin(r.direction * M_PI / 180);
 
 	if (panel == -1)
-		return (r.x - (r.size / 2 * cosx) >= 0 && r.x + (r.size / 2 * cosx) < draw_area_.width && r.y - (r.size / 2 * siny) >= 0 && r.y + (r.size / 2 * siny) < draw_area_.height);
-	return (r.x - (r.size / 2 * cosx) >= draw_area_.panels[panel].LT.x
-		&& r.x + (r.size / 2 * cosx) < draw_area_.panels[panel].RB.x
-		&& r.y - (r.size / 2 * siny) >= draw_area_.panels[panel].LT.y
-		&& r.y + (r.size / 2 * siny) < draw_area_.panels[panel].RB.y);
+		return (r.x - (r.size / 2 * cosx) >= 0
+			&& r.x + (r.size / 2 * cosx) < draw_area_.width
+			&& r.y - (r.size / 2 * siny) >= 0 
+			&& r.y + (r.size / 2 * siny) < draw_area_.height);
+
+	return (r.x - (r.size / 2 * cosx) >= draw_area_.panels[panel].lt.x
+		&& r.x + (r.size / 2 * cosx) < draw_area_.panels[panel].rb.x
+		&& r.y - (r.size / 2 * siny) >= draw_area_.panels[panel].lt.y
+		&& r.y + (r.size / 2 * siny) < draw_area_.panels[panel].rb.y);
 }
 
 bool Renderer::Validate(Line l, int panel) {
 
-	return (Validate(l.a, panel) && Validate(l.b, panel));
+	return (Validate(*l.vertices.at(0), panel) && Validate(*l.vertices.at(1), panel));
 }
 
 bool Renderer::Validate(Rect rect, int panel) {
 
-	return (Validate(rect.LT, panel) && Validate(rect.RB, panel));
+	return (Validate(rect.lt, panel) && Validate(rect.rb, panel));
 }
 
 void Renderer::DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour)
