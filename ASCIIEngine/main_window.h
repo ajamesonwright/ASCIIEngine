@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include <windowsx.h>
 #include <stdint.h>
+#include <vector>
 #include "geometry.h"
 #include "input.h"
 
@@ -16,9 +17,10 @@ namespace main_window {
 
 	// execution state
 	int run_state_;
+	int draw_mode_;
 
 	// current mouseover panel
-	int current_panel_;
+	int current_panel_ = -1;
 
 	Renderer* renderer_ = nullptr;
 	Input* input_ = nullptr;
@@ -37,15 +39,23 @@ namespace main_window {
 	uint8_t main_to_client_offset_y_ = 0;
 
 	Rect main_rect, draw_rect;
+	Point2d geo_start, geo_end;
+	Ray2d camera;
+	std::vector<Geometry*> geometry_queue;
 
 	MSG event_message;
 
 	Renderer* GetRenderer();
+	Rect* GetDrawAreaPanel(int panel);
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);
+	void SetDrawMode(int p_draw_mode);
+	int GetCursorFocus(Point2d p);
 
-	int GetCursorFocus(Point p);
+	void SimulateFrame(float s_per_frame);
+
+	void* FindMemoryHandle(Geometry* g);
 
 	void SetWindowHeight(uint16_t p_height);
 	uint16_t GetWindowHeight();
@@ -65,13 +75,23 @@ namespace main_window {
 	Rect& GetDrawRect();
 	void SetDrawRect(HWND hwnd, Rect* rect);
 
-	void ConditionMouseCoords(Point& p);
+	void ConditionMouseCoords(Point2d& p);
 	void ConditionMouseCoords(POINT& p);
 };
 
-enum {
+enum run_state {
 	STOPPED,
 	RUNNING,
+};
+
+enum draw_mode {
+	D_LINE,
+	D_TRI,
+	D_RECT,
+	D_QUAD,
+	D_CIRCLE,
+	
+	D_DRAW_MODE_SIZE,
 };
 
 #endif
