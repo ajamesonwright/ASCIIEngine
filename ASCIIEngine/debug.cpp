@@ -6,7 +6,7 @@
 /*  Print flag decoding
 	0
 	b
-	0
+	0 - camera status
 	0 - input_status
 	0 - frames per second
 	0 - draw mode changed
@@ -16,12 +16,12 @@
 	0 - input detected
 	0 - mouse position
 */
-int print = 0b0100'0000;
+int print = 0b0000'0000;
 // storage for print flag to allow toggling
 int stored_print_flag = 0b0000'0000;
 
 std::string calling_classes[calling_class::CLASS_SIZE] = { "main_window", "renderer", "geometry", "input" };
-std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "input_detected", "panel_lock", "geo_queue_mod", "draw_mode_changed", "frames_per_second", "input_status" };
+std::string debug_types[debug_type::DEBUG_SIZE] = { "mouse_position", "input_detected", "panel_lock", "geo_queue_mod", "draw_mode_changed", "frames_per_second", "input_status", "camera_status" };
 #define TAB ":\t"
 #define DTAB ":\t\t"
 
@@ -63,11 +63,13 @@ namespace {
 		{
 			return "CIRCLE";
 		} break;
+		default:
+			return "UNKNOWN GEOMETRY TYPE";
 		}
 	};
 }
 
-void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel, Geometry* obj, int draw_mode, float fps, Input* input) {
+void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel, Geometry* obj, int draw_mode, float fps, Input* input, Ray2d* camera) {
 
 	if (!print)
 		return;
@@ -131,7 +133,7 @@ void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel
 			bool return_early = true;
 			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + " Input = ";
 			for (int i = 1; i < KEY_SIZE; i++) {
-				//if (input->GetInput(i))
+				if (input->GetInput(i))
 					return_early = false;
 				mp += std::to_string(input->GetInput(i)) + " ";
 			}
@@ -139,6 +141,13 @@ void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel
 			
 			if (return_early)
 				return;
+		} break;
+		case CAMERA_STATUS:
+		{
+			mp += calling_classes[calling_class] + DTAB + debug_types[debug_type] + TAB + " Camera: \tx:" + std::to_string(camera->x) + "\t\t\ty: " + std::to_string(camera->y) + "\t\t\tdir: " + std::to_string(camera->direction) + "\n";
+			mp += "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tpx: " + std::to_string(camera->px) + "\tpy: " + std::to_string(camera->py) + "\n";
+			mp += "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tvx: " + std::to_string(camera->vx) + "\tvy: " + std::to_string(camera->vy) + "\n";
+			mp += "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tax: " + std::to_string(camera->ax) + "\tay: " + std::to_string(camera->ay) + "\n";
 		} break;
 		}
 		Print(mp);

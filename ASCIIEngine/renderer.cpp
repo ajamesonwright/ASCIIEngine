@@ -477,7 +477,7 @@ void Renderer::DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour)
 	// if line is not horizontal, start at lower of the two y values and count over to the higher
 	if (min_y)
 	{
-		for (int i = min_y->y; i < max_y->y; i++)
+		/*for (int i = min_y->y; i < max_y->y; i++)
 		{
 			if (min_x)
 			{
@@ -486,7 +486,7 @@ void Renderer::DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour)
 
 				}
 			}
-		}
+		}*/
 	}
 	else
 	{

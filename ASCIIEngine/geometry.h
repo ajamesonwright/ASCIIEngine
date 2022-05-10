@@ -314,19 +314,23 @@ class Circle : public Geometry {
 class Ray2d : public Point2d {
 
 public:
-	int16_t direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
+	float direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
 	uint8_t size; // for visual representation in top down panel
+	float px, py;
 	float vx, vy;
 	float ax, ay;
+	uint16_t turn_speed = 150, move_speed = 1000;
 
-	Ray2d() { x = 0; y = 0; direction = 0; size = 10; vx = 0; vy = 0; ax = 0.0f; ay = 0.0f; };
-	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; size = source.size; vx = source.vx; vy = source.vy; ax = 0.0f; ay = 0.0f; };
-	Ray2d(uint32_t p_x, uint32_t p_y, uint16_t p_direction) { x = p_x; y = p_y; direction = ClampDirection(p_direction); size = 10; vx = 0; vy = 0; ax = 0.0f; ay = 0.0f; };
+	Ray2d() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
+	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; size = source.size; px = source.px; py = source.py; vx = source.vx; vy = source.vy; ax = 0.0f; ay = 0.0f; };
+	Ray2d(uint32_t p_x, uint32_t p_y, float p_direction) { x = p_x; y = p_y; direction = p_direction; ClampDirection(); size = 10; px = (float)p_x; py = (float)p_y; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
 
-	uint16_t ClampDirection(int16_t p_direction) {
-		if (p_direction < 0)
-			return 360 - (-p_direction - (int)(p_direction / -360) * 360);
-		return p_direction - (int)(p_direction / 360) * 360;
+	void ClampDirection() {
+		if (direction < 0) {
+			direction = 360.0f - (-direction - (int)(direction / -360) * 360);
+			return;
+		}
+		direction -= (int)(direction / 360) * 360.0f;
 	};
 	void ClampPosition(Rect panel) {
 		if ((x - size / 2) < panel.lt.x) (x = panel.lt.x + size / 2);
@@ -335,7 +339,7 @@ public:
 		if ((y + size / 2) > panel.rb.y) (y = panel.rb.y - size / 2);
 	};
 	void ClampVelocity() {
-		float limit = 1.0f;
+		float limit = 100.0f;
 		if (vx > limit) 
 			vx = limit;
 		if (vy > limit) 
@@ -346,7 +350,7 @@ public:
 			vy = -limit;
 	}
 	void ClampAcceleration() {
-		float limit = 1.0f;
+		float limit = 2000.0f;
 		if (ax > limit) ax = limit;
 		if (ay > limit) ay = limit;
 		if (ax < -limit) ax = -limit;

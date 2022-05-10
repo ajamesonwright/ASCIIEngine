@@ -46,7 +46,7 @@ namespace main_window {
 	MSG event_message;
 
 	Renderer* GetRenderer();
-	Rect* GetDrawAreaRect(int panel = 2);
+	Rect* GetDrawAreaPanel(int panel);
 
 	bool GetRunningState();
 	void SetRunningState(int p_run_state);

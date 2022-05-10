@@ -37,12 +37,20 @@ bool Input::GetInput(int key_code) {
 	return input_state[key_code].held;
 }
 
-void Input::HandleInput(float s_per_frame) {
-	if (input_state[W_DOWN].held) camera->ay = camera->ay - 1;
-	if (input_state[S_DOWN].held) camera->ay = camera->ay + 1;
+void Input::HandleInput(MSG* msg, float dt) {
+	debug::PrintDebugMsg(calling_class::INPUT_CLASS, debug_type::INPUT_STATUS, msg, -1, -1, nullptr, -1, -1.0f, this, nullptr);
+	if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
+	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);
+	camera->ClampDirection();
 
-	if (input_state[A_DOWN].held) camera->direction = camera->direction - 1;
-	if (input_state[D_DOWN].held) camera->direction = camera->direction + 1;
+	if (input_state[W_DOWN].held) {
+		camera->ay -= cos((camera->direction + 90) * M_PI / 180.0f) * camera->move_speed;
+		camera->ax += sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+	}
+	if (input_state[S_DOWN].held) {
+		camera->ay += cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+		camera->ax -= sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+	}
 }
 
 int Input::VkToKey(WPARAM w_param) {

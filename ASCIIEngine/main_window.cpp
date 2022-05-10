@@ -58,7 +58,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		{
 			// allow debug messaging toggle
 			debug::ToggleDebugPrinting();
-			//MW::input_->ClearInput(true, false, END_DOWN);
 		} break;
 		case (VK_ESCAPE):
 		{
@@ -86,11 +85,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 		// Reset TOP_DOWN panel
 		if (MW::current_panel_ != Renderer::TOP_DOWN) {
-			MW::renderer_->UpdateRenderArea(MW::renderer_->GetDrawArea()->panels[Renderer::TOP_DOWN], Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
+			MW::renderer_->UpdateRenderArea(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN), Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
 		}
 		// Reset FIRST_PERSON panel
 		if (MW::current_panel_ != Renderer::FIRST_PERSON) {
-			MW::renderer_->UpdateRenderArea(MW::renderer_->GetDrawArea()->panels[Renderer::FIRST_PERSON], Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
+			MW::renderer_->UpdateRenderArea(*MW::GetDrawAreaPanel(Renderer::FIRST_PERSON), Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
 		}
 		if (MW::current_panel_ == Renderer::BACKGROUND)
 			break;
@@ -221,9 +220,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	MW::GetRenderer()->ClearRenderArea(true);
 	// Set initial viewport location and orientation
 	{
-		Rect* td_panel = MW::GetDrawAreaRect(Renderer::TOP_DOWN);
+		Rect* td_panel = MW::GetDrawAreaPanel(Renderer::TOP_DOWN);
 		MW::camera = Ray2d(td_panel->lt.x + td_panel->GetWidth() / 2, td_panel->lt.y + td_panel->GetHeight() / 2, -90);
-		MW::camera.SetSize(30);
+		MW::camera.SetSize(20);
 	}
 
 	// Establish framerate metrics
@@ -256,10 +255,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 
 		// Perform actions for updated input_
-		MW::input_->HandleInput(dt);
+		MW::input_->HandleInput(&MW::event_message, dt);
 		MW::SimulateFrame(dt);
 
-			MW::GetRenderer()->ClearRenderArea(true);
+		MW::GetRenderer()->ClearRenderArea(true);
 		// Draw highlight line for click and hold
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::GetRenderer()->GetFocusLock() == 0) {
 			MW::GetRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
@@ -286,7 +285,7 @@ Renderer* main_window::GetRenderer() {
 	return renderer_;
 }
 
-Rect* main_window::GetDrawAreaRect(int panel) {
+Rect* main_window::GetDrawAreaPanel(int panel) {
 	return &MW::renderer_->GetDrawArea()->panels[panel];
 }
 
@@ -327,20 +326,21 @@ int main_window::GetCursorFocus(Point2d p) {
 void main_window::SimulateFrame(float dt) {
 
 	// Damping effect on acceleration
-	/*MW::camera.ax = MW::camera.ax - MW::camera.vx * 10.0f;
-	MW::camera.ay = MW::camera.ay - MW::camera.vy * 10.0f;*/
-	MW::camera.ax = MW::camera.ax * 0.1f;
-	MW::camera.ay = MW::camera.ay * 0.1f;
+	MW::camera.ax = MW::camera.ax * 0.70f;
+	MW::camera.ay = MW::camera.ay * 0.70f;
 	MW::camera.ClampAcceleration();
 	// p = p + v*t + 1/2*a*t^2
-	MW::camera.x = (uint32_t)(MW::camera.x + MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f);
-	MW::camera.y = (uint32_t)(MW::camera.y + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f);
-	MW::camera.ClampPosition(MW::GetRenderer()->GetDrawArea()->panels[Renderer::TOP_DOWN]);
+	MW::camera.px = MW::camera.px + MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
+	MW::camera.py = MW::camera.py + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
+	MW::camera.x = (uint32_t)MW::camera.px;
+	MW::camera.y = (uint32_t)MW::camera.py;
+	MW::camera.ClampPosition(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN));
 	// v = v + a*t
-	MW::camera.vx = MW::camera.vx + MW::camera.ax * dt;
-	MW::camera.vy = MW::camera.vy + MW::camera.ay * dt;
+	MW::camera.vx = (MW::camera.vx + MW::camera.ax * dt) * 0.90f;
+	MW::camera.vy = (MW::camera.vy + MW::camera.ay * dt) * 0.90f;
 	MW::camera.ClampVelocity();
-	debug::PrintDebugMsg(calling_class::MAIN_WINDOW_CLASS, debug_type::INPUT_STATUS, &MW::event_message, -1, -1, nullptr, -1, -1.0f, MW::input_);
+
+	debug::PrintDebugMsg(calling_class::MAIN_WINDOW_CLASS, debug_type::CAMERA_STATUS, &MW::event_message, -1, -1, nullptr, -1, -1.0f, nullptr, &MW::camera);
 }
 
 // Find the appropriate memory address that reflects the lower left point of the geometry object
