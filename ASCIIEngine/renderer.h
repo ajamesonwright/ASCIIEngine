@@ -70,13 +70,14 @@ public:
 	DrawArea* GetDrawArea();
 	void SetDrawArea(Rect* rect, uint8_t border_width);
 	void UpdateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
-	void UpdateRenderArea(Ray2d r, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void UpdateRenderArea(Camera c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void UpdateRenderArea(Geometry g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
 	void RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
 	void RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
 	void UpdateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
 	void UpdateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
+	void UpdateRenderArea(Circle c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
 	void UpdateGeometry();
 	void DrawRenderArea(HDC hdc);
 	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
@@ -90,14 +91,12 @@ public:
 
 private:
 	DrawArea draw_area_;
-	uint8_t fov; // field of view of FIRST_PERSON panel in degrees
 
-	Point2d Clamp(Point2d &p, Point2d max);
 	bool Validate(Point2d p, int panel = -1);
-	bool Validate(Ray2d r, int panel = -1);
+	bool Validate(Camera c, int panel = -1);
 	bool Validate(Line l, int panel = -1);
 	bool Validate(Rect rect, int panel = -1);
-	void DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour);
+	bool Validate(Circle c, int panel = -1);
 	Line ClipLine(Line l);
 };
 

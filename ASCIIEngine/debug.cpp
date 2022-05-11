@@ -16,7 +16,7 @@
 	0 - input detected
 	0 - mouse position
 */
-int print = 0b0000'0000;
+int print = 0b0000'1000;
 // storage for print flag to allow toggling
 int stored_print_flag = 0b0000'0000;
 
@@ -69,7 +69,7 @@ namespace {
 	};
 }
 
-void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel, Geometry* obj, int draw_mode, float fps, Input* input, Ray2d* camera) {
+void debug::PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id, int locked_panel, Geometry* obj, int draw_mode, float fps, Input* input, Camera* camera) {
 
 	if (!print)
 		return;

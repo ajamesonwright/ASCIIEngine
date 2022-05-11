@@ -7,7 +7,7 @@
 #include <sstream>
 
 class Geometry;
-class Ray2d;
+class Camera;
 class Input;
 
 enum calling_class {
@@ -34,7 +34,7 @@ enum debug_type {
 
 namespace debug {
 
-	void PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id = -1, int locked_panel = -1, Geometry* obj = nullptr, int draw_mode = -1, float fps = 0, Input* input = nullptr, Ray2d* camera = nullptr);
+	void PrintDebugMsg(int calling_class, int debug_type, MSG* msg, int panel_id = -1, int locked_panel = -1, Geometry* obj = nullptr, int draw_mode = -1, float fps = 0, Input* input = nullptr, Camera* camera = nullptr);
 	void ToggleDebugPrinting();
 }
 

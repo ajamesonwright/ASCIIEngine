@@ -40,7 +40,7 @@ namespace main_window {
 
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
-	Ray2d camera;
+	Camera camera;
 	std::vector<Geometry*> geometry_queue;
 
 	MSG event_message;

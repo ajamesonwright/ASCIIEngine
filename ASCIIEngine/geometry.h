@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include "debug.h"
 
 class Point2d {
@@ -305,59 +307,61 @@ class Quad : public Geometry {
 };
 
 class Circle : public Geometry {
-	Point2d c;
+
+public:
+	Point2d center;
 	uint16_t r = 0;
 
-	bool Collision(Point2d p) { return c.Displacement(p) <= r; }
+	Circle() { center = Point2d(); r = 0; };
+	Circle(Point2d p_c, uint16_t p_r) { center = p_c; r = p_r; type = G_CIRCLE; vertices.push_back(&p_c); };
+	Circle(const Circle& source) : Geometry(G_CIRCLE) {
+		center = source.center;
+		r = source.r;
+		vertices.push_back(source.vertices[0]);
+	}
+	Circle(const Geometry& source) {
+		if (source.type != G_CIRCLE && source.vertices.size() != 1)
+			return;
+
+		type = source.type;
+		center = *source.vertices[0];
+		vertices.push_back(&center);
+		r = 30;
+	}
+	bool Collision(Point2d p) { return center.Displacement(p) <= r; }
 };
 
 class Ray2d : public Point2d {
 
 public:
 	float direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
-	uint8_t size; // for visual representation in top down panel
-	float px, py;
-	float vx, vy;
-	float ax, ay;
+	
+	Ray2d() { x = 0; y = 0; direction = 0.0f; };
+	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; };
+	Ray2d(uint32_t p_x, uint32_t p_y, float p_direction) { x = p_x; y = p_y; direction = p_direction; };
+};
+
+class Camera : public Ray2d {
+
+	// Visual representation in top down panel, using an arrow to depict position and direction
+public:
+	uint8_t size; 
+	float px, py, vx, vy, ax, ay;
 	uint16_t turn_speed = 150, move_speed = 1000;
+	Point2d left, right, tip, base;
+	uint8_t fov = 60;
 
-	Ray2d() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
-	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; size = source.size; px = source.px; py = source.py; vx = source.vx; vy = source.vy; ax = 0.0f; ay = 0.0f; };
-	Ray2d(uint32_t p_x, uint32_t p_y, float p_direction) { x = p_x; y = p_y; direction = p_direction; ClampDirection(); size = 10; px = (float)p_x; py = (float)p_y; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
+	Camera() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
+	Camera(const Camera& source);
+	Camera(uint32_t p_x, uint32_t p_y, float p_direction);
 
-	void ClampDirection() {
-		if (direction < 0) {
-			direction = 360.0f - (-direction - (int)(direction / -360) * 360);
-			return;
-		}
-		direction -= (int)(direction / 360) * 360.0f;
-	};
-	void ClampPosition(Rect panel) {
-		if ((x - size / 2) < panel.lt.x) (x = panel.lt.x + size / 2);
-		if ((y - size / 2) < panel.lt.y) (y = panel.lt.y + size / 2);
-		if ((x + size / 2) > panel.rb.x) (x = panel.rb.x - size / 2);
-		if ((y + size / 2) > panel.rb.y) (y = panel.rb.y - size / 2);
-	};
-	void ClampVelocity() {
-		float limit = 100.0f;
-		if (vx > limit) 
-			vx = limit;
-		if (vy > limit) 
-			vy = limit;
-		if (vx < -limit)
-			vx = -limit;
-		if (vy < -limit) 
-			vy = -limit;
-	}
-	void ClampAcceleration() {
-		float limit = 2000.0f;
-		if (ax > limit) ax = limit;
-		if (ay > limit) ay = limit;
-		if (ax < -limit) ax = -limit;
-		if (ay < -limit) ay = -limit;
-	}
+	void Update();
 
 	void SetSize(uint8_t p_size) { size = p_size; };
+	void ClampDirection();
+	void ClampPosition(Rect panel);
+	void ClampVelocity();
+	void ClampAcceleration();
 };
 
 struct Ray3d : public Point3d {

@@ -14,8 +14,6 @@ enum keys {
 	A_DOWN,
 	S_DOWN,
 	D_DOWN,
-	//END_DOWN,
-	//ESCAPE_DOWN,
 
 	KEY_SIZE,
 };
@@ -28,7 +26,7 @@ class Input {
 	};
 
 public:
-	Input(Ray2d* p_camera) {
+	Input(Camera* p_camera) {
 		camera = p_camera;
 	}
 
@@ -41,7 +39,7 @@ public:
 	void HandleInput(MSG* msg, float ms_per_frame);
 
 private:
-	Ray2d* camera;
+	Camera* camera;
 	int VkToKey(WPARAM wp);
 	void HandleInput(int key_code);
 };

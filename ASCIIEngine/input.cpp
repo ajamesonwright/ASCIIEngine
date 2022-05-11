@@ -43,13 +43,16 @@ void Input::HandleInput(MSG* msg, float dt) {
 	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);
 	camera->ClampDirection();
 
+	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+
 	if (input_state[W_DOWN].held) {
-		camera->ay -= cos((camera->direction + 90) * M_PI / 180.0f) * camera->move_speed;
-		camera->ax += sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+		camera->ay -= (float)cosy;
+		camera->ax += (float)sinx;
 	}
 	if (input_state[S_DOWN].held) {
-		camera->ay += cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
-		camera->ax -= sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+		camera->ay += (float)cosy;
+		camera->ax -= (float)sinx;
 	}
 }
 

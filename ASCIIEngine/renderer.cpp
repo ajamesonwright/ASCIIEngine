@@ -7,7 +7,6 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	instanced = true;
 
 	draw_area_ = DrawArea();
-	this->fov = 60;
 }
 
 Renderer::DrawArea* Renderer::GetDrawArea() {
@@ -66,26 +65,18 @@ void Renderer::UpdateRenderArea(Point2d p, int panel, uint32_t colour, bool vali
 	draw_area_.update = true;
 }
 
-void Renderer::UpdateRenderArea(Ray2d r, int panel, uint32_t colour, bool valid) {
+void Renderer::UpdateRenderArea(Camera c, int panel, uint32_t colour, bool valid) {
 	if (!valid)
-		if (!Validate(r, panel))
+		if (!Validate(c, panel))
 			return;
 
 	// Draw main line
-	Point2d base, tip;
-	double cosx = cos(r.direction * M_PI / 180);
-	double siny = sin(r.direction * M_PI / 180);
-	base = Point2d((uint32_t)(r.x - r.size * cosx / 2 + 0.5), (uint32_t)(r.y - r.size * siny / 2 + 0.5));
-	tip = Point2d((uint32_t)(r.x + r.size * cosx / 2 + 0.5), (uint32_t)(r.y + r.size * siny / 2 + 0.5));
-	Line main = Line(base, tip);
+	Line main = Line(c.base, c.tip);
 	UpdateRenderArea(main, panel, colour, true);
 
 	// Draw edges of arrow
-	Point2d left, right;
-	left = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 - 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 - 135) * M_PI / 180) + 0.5));
-	right = Point2d((uint32_t)(tip.x - 0.30 * r.size * cos((r.direction + 180 + 135) * M_PI / 180) + 0.5), (uint32_t)(tip.y - 0.30 * r.size * sin((r.direction + 180 + 135) * M_PI / 180) + 0.5));
-	Line left_edge = Line(tip, left);
-	Line right_edge = Line(tip, right);
+	Line left_edge = Line(c.tip, c.left);
+	Line right_edge = Line(c.tip, c.right);
 	UpdateRenderArea(left_edge, panel, colour, true);
 	UpdateRenderArea(right_edge, panel, colour, true);
 }
@@ -110,6 +101,10 @@ void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool val
 	case Geometry::G_RECT:
 	{
 		UpdateRenderArea(static_cast<Rect>(g), 0);
+	} break;
+	case Geometry::G_CIRCLE:
+	{
+		UpdateRenderArea(static_cast<Circle>(g), 0);
 	} break;
 	}
 }
@@ -232,6 +227,22 @@ void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	}
 
 	draw_area_.update = true;
+}
+
+void Renderer::UpdateRenderArea(Circle p_circle, int panel, uint32_t colour, bool valid) {
+
+	if (!valid)
+		if (!Validate(p_circle, panel))
+			return;
+
+	Circle c = p_circle;
+
+	UpdateRenderArea(p_circle.center, panel, colour, true);
+	for (int i = 0; i < 360; i += 30) {
+		double x = c.center.x + (c.r * cos(i * M_PI / 180));
+		double y = c.center.y + (c.r * sin(i * M_PI / 180));
+		UpdateRenderArea(Point2d((uint32_t)x, (uint32_t)y), panel, colour, true);
+	}
 }
 
 void Renderer::DrawRenderArea(HDC hdc) {
@@ -370,16 +381,6 @@ void Renderer::CleanUp() {
 		free(draw_area_.data);
 }
 
-Point2d Renderer::Clamp(Point2d &p, Point2d max) {
-
-	if (p.x >= max.x)		p.x = max.x;
-	if (p.x < 0)			p.x = 0;
-	if (p.y >= max.y)		p.y = max.y;
-	if (p.y < 0)			p.y = 0;
-
-	return p;
-}
-
 void* Renderer::GetMemoryLocation(int panel, Point2d p) {
 
 	uint32_t* cursorMemoryLocation = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
@@ -389,25 +390,13 @@ void* Renderer::GetMemoryLocation(int panel, Point2d p) {
 bool Renderer::Validate(Point2d p, int panel) {
 
 	if (panel == -1)
-		return (p.x >= 0 && p.x < draw_area_.width&& p.y >= 0 && p.y < draw_area_.height);
-	return (p.x >= draw_area_.panels[panel].lt.x && p.x < draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y < draw_area_.panels[panel].rb.y);
+		return (p.x >= 0 && p.x <= draw_area_.width&& p.y >= 0 && p.y <= draw_area_.height);
+	return (p.x >= draw_area_.panels[panel].lt.x && p.x <= draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y <= draw_area_.panels[panel].rb.y);
 }
 
-bool Renderer::Validate(Ray2d r, int panel) {
+bool Renderer::Validate(Camera c, int panel) {
 	
-	double cosx = cos(r.direction * M_PI / 180);
-	double siny = sin(r.direction * M_PI / 180);
-
-	if (panel == -1)
-		return (r.x - (r.size / 2 * cosx) >= 0
-			&& r.x + (r.size / 2 * cosx) < draw_area_.width
-			&& r.y - (r.size / 2 * siny) >= 0 
-			&& r.y + (r.size / 2 * siny) < draw_area_.height);
-
-	return (r.x - (r.size / 2 * cosx) >= draw_area_.panels[panel].lt.x
-		&& r.x + (r.size / 2 * cosx) < draw_area_.panels[panel].rb.x
-		&& r.y - (r.size / 2 * siny) >= draw_area_.panels[panel].lt.y
-		&& r.y + (r.size / 2 * siny) < draw_area_.panels[panel].rb.y);
+	return (Validate(c.left, panel) && Validate(c.right, panel) && Validate(c.tip, panel) && Validate(c.base, panel));
 }
 
 bool Renderer::Validate(Line l, int panel) {
@@ -420,78 +409,12 @@ bool Renderer::Validate(Rect rect, int panel) {
 	return (Validate(rect.lt, panel) && Validate(rect.rb, panel));
 }
 
-void Renderer::DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour)
-{
-	/*
-		Bresenham algorithm
-		Octants defined analogously to Cartesian quadrants
-		++, -+, --, +- (except proceeding CW instead of CCW):
+bool Renderer::Validate(Circle c, int panel) {
 
-			|
-		  2	| 3
-		---------
-		  1	| 0
-			|
-		0 - (+, +)
-		1 - (-, +)
-		2 - (-, -)
-		3 - (+, -)
-	*/
-	
-	if (!(Validate(p1, 1) && Validate(p2, 1)))
-	{
-
-		ClipLine(Line{ p1, p2 });
-	}
-
-	
-
-	Point2d* min_y = nullptr;
-	Point2d* min_x = nullptr;
-	Point2d* max_y = nullptr;
-	Point2d* max_x = nullptr;
-	
-	
-	if (p1.y < p2.y)
-	{
-		min_y = &p1;
-		max_y = &p2;
-	}
-	if (p1.y > p2.y)
-	{
-		min_y = &p2;
-		max_y = &p1;
-	}
-
-	if (p1.x < p2.x)
-	{
-		min_x = &p1;
-		max_x = &p2;
-	}
-	if (p1.x > p2.x)
-	{
-		min_x = &p2;
-		max_x = &p1;
-	}
-
-	// if line is not horizontal, start at lower of the two y values and count over to the higher
-	if (min_y)
-	{
-		/*for (int i = min_y->y; i < max_y->y; i++)
-		{
-			if (min_x)
-			{
-				for (int j = min_x->x; j < max_x->x; j++)
-				{
-
-				}
-			}
-		}*/
-	}
-	else
-	{
-
-	}
+	return (Validate(Point2d(c.center.x - c.r, c.center.y), panel) 
+		&& Validate(Point2d(c.center.x + c.r, c.center.y), panel) 
+		&& Validate(Point2d(c.center.x, c.center.y - c.r), panel) 
+		&& Validate(Point2d(c.center.x, c.center.y + c.r), panel));
 }
 
 Line Renderer::ClipLine(Line l)

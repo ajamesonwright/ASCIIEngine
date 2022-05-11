@@ -221,9 +221,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// Set initial viewport location and orientation
 	{
 		Rect* td_panel = MW::GetDrawAreaPanel(Renderer::TOP_DOWN);
-		MW::camera = Ray2d(td_panel->lt.x + td_panel->GetWidth() / 2, td_panel->lt.y + td_panel->GetHeight() / 2, -90);
+		MW::camera = Camera(td_panel->lt.x + td_panel->GetWidth() / 2, td_panel->lt.y + td_panel->GetHeight() / 2, -90);
 		MW::camera.SetSize(20);
 	}
+
+	Circle* c = new Circle(Point2d(100, 200), 30);
+	MW::geometry_queue.push_back(c);
 
 	// Establish framerate metrics
 	float dt = 1.0f / 60.0f;
@@ -329,16 +332,17 @@ void main_window::SimulateFrame(float dt) {
 	MW::camera.ax = MW::camera.ax * 0.70f;
 	MW::camera.ay = MW::camera.ay * 0.70f;
 	MW::camera.ClampAcceleration();
-	// p = p + v*t + 1/2*a*t^2
-	MW::camera.px = MW::camera.px + MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
-	MW::camera.py = MW::camera.py + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
-	MW::camera.x = (uint32_t)MW::camera.px;
-	MW::camera.y = (uint32_t)MW::camera.py;
-	MW::camera.ClampPosition(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN));
 	// v = v + a*t
 	MW::camera.vx = (MW::camera.vx + MW::camera.ax * dt) * 0.90f;
 	MW::camera.vy = (MW::camera.vy + MW::camera.ay * dt) * 0.90f;
 	MW::camera.ClampVelocity();
+	// p = p + v*t + 1/2*a*t^2
+	MW::camera.px = MW::camera.px + MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
+	MW::camera.py = MW::camera.py + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
+	MW::camera.x = (uint32_t)(MW::camera.px + 0.75); // 0.75 added to account for truncation due to cast
+	MW::camera.y = (uint32_t)(MW::camera.py + 0.75);
+	MW::camera.ClampPosition(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN));
+	MW::camera.Update();
 
 	debug::PrintDebugMsg(calling_class::MAIN_WINDOW_CLASS, debug_type::CAMERA_STATUS, &MW::event_message, -1, -1, nullptr, -1, -1.0f, nullptr, &MW::camera);
 }

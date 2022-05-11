@@ -62,6 +62,7 @@ int Geometry::ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Po
 }
 
 bool Geometry::CompareBySlope(float f1, float f2) {
+
 	// return indicates if floats are in their correct positions in vector
 	if (f1 < 0) {
 		if (f2 < 0)
@@ -76,6 +77,7 @@ bool Geometry::CompareBySlope(float f1, float f2) {
 }
 
 std::vector<float> Geometry::CalculateSlopes(std::vector<Point2d*> v_g) {
+
 	uint32_t diff_x, diff_y;
 	std::vector<float> v_f;
 	
@@ -92,6 +94,7 @@ std::vector<float> Geometry::CalculateSlopes(std::vector<Point2d*> v_g) {
 }
 
 void Geometry::SortBySlope(std::vector<Point2d*>& vertices, std::vector<float> slopes) {
+
 	// sort by least negative -> most negative -> 1 -> most positive -> least positive to enforce clockwise traversal of vertices
 	for (int i = 0; i < slopes.size() - 1; i++) {
 		// both less than zero
@@ -102,4 +105,79 @@ void Geometry::SortBySlope(std::vector<Point2d*>& vertices, std::vector<float> s
 
 		
 	}
+}
+
+Camera::Camera(const Camera& source) {
+
+	x = source.x; y = source.y;
+	direction = source.direction;
+	size = source.size;
+	px = source.px; py = source.py;
+	vx = source.vx; vy = source.vy;
+	ax = 0.0f; ay = 0.0f;
+	base = Point2d(source.base);
+	tip = Point2d(source.tip);
+	left = Point2d(source.left);
+	right = Point2d(source.right);
+}
+
+Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
+
+	x = p_x; y = p_y;
+	direction = p_direction;
+	ClampDirection();
+	size = 10;
+	px = (float)p_x; py = (float)p_y;
+	vx = 0.0f; vy = 0.0f;
+	ax = 0.0f; ay = 0.0f;
+	Update();
+}
+
+void Camera::Update() {
+
+	double cosx = cos(direction * M_PI / 180);
+	double siny = sin(direction * M_PI / 180);
+	base = Point2d((uint32_t)(x - size * cosx / 2 + 0.5), (uint32_t)(y - size * siny / 2 + 0.5));
+	tip = Point2d((uint32_t)(x + size * cosx / 2 + 0.5), (uint32_t)(y + size * siny / 2 + 0.5));
+	double arrow_point_length = (size / 2) * sin((fov / 2) * M_PI / 180);
+
+	left = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5));
+	right = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
+}
+
+void Camera::ClampDirection() {
+
+	if (direction < 0) {
+		direction = 360.0f - (-direction - (int)(direction / -360) * 360);
+		return;
+	}
+	direction -= (int)(direction / 360) * 360.0f;
+}
+void Camera::ClampPosition(Rect panel) {
+
+	if ((px - size / 2) < panel.lt.x) (px = (float)panel.lt.x + size / 2);
+	if ((py - size / 2) < panel.lt.y) (py = (float)panel.lt.y + size / 2);
+	if ((px + size / 2) > panel.rb.x) (px = (float)panel.rb.x - size / 2);
+	if ((py + size / 2) > panel.rb.y) (py = (float)panel.rb.y - size / 2);
+}
+
+void Camera::ClampVelocity() {
+
+	float limit = 100.0f;
+	if (vx > limit)
+		vx = limit;
+	if (vy > limit)
+		vy = limit;
+	if (vx < -limit)
+		vx = -limit;
+	if (vy < -limit)
+		vy = -limit;
+}
+void Camera::ClampAcceleration() {
+
+	float limit = 2000.0f;
+	if (ax > limit) ax = limit;
+	if (ay > limit) ay = limit;
+	if (ax < -limit) ax = -limit;
+	if (ay < -limit) ay = -limit;
 }
