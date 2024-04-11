@@ -1,12 +1,21 @@
-#include "geometry.h"
+#include "Geometry.h"
 
-int Geometry::ComparePointsByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v, Point2d* p1, Point2d* p2, int begin, int end) {
+/*
+* Take in a binary mask compare type and perform the associated comparison of geometry coordinates.
+* 0b10	- compare X coordinates, s.th. return 0 indicates p1.x is left of p2.x, and return 1 indicates the opposite.
+* 0b101 - compare Y coordinates, s.th. return 0 indicates p1.y is above (lower pixel value) than p2.y, and vice versa.
+*/
+int Geometry::ComparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
 
 	// Checking for invalid compare_type values
-	if (0b11110000 & compare_type || 0b1000 & compare_type || 0b0000 & compare_type)
+	if (0b11110000 & compare_type || 0b1000 & compare_type || 0b0000 & compare_type) {
+		throw "Invalid compare type!";
 		return -1;
-	if (0b10 & compare_type && 0b100 & compare_type)
+	}
+	if (0b10 & compare_type && 0b100 & compare_type) {
+		throw "Invalid compare type!";
 		return -1;
+	}
 
 	if (v)
 		return ComparePointVectorByCoordinate(compare_type, v, begin, end);
@@ -15,7 +24,7 @@ int Geometry::ComparePointsByCoordinate(uint8_t compare_type, std::vector<Point2
 	return -1;
 }
 
-int Geometry::ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v, int begin, int end) {
+int Geometry::ComparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin, const int end) {
 
 	size_t range_begin, range_end;
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
@@ -40,11 +49,13 @@ int Geometry::ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<P
 	return (int)index;
 }
 
-int Geometry::ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Point2d* p2) {
+int Geometry::ComparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2) {
 
+	// Compare ->                 X     Y
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
 
 	uint32_t compare_value[2] = { 0 };
+	// Filter out the coordinate we don't want
 	compare_value[0] = ((compare[1] & compare_type) >> 1) * p1->x + ((compare[2] & compare_type) >> 2) * p1->y;
 	compare_value[1] = ((compare[1] & compare_type) >> 1) * p2->x + ((compare[2] & compare_type) >> 2) * p2->y;
 
@@ -61,7 +72,7 @@ int Geometry::ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Po
 	return index;
 }
 
-bool Geometry::CompareBySlope(float f1, float f2) {
+bool Geometry::CompareBySlope(const float f1, float f2) {
 
 	// return indicates if floats are in their correct positions in vector
 	if (f1 < 0) {
@@ -76,7 +87,7 @@ bool Geometry::CompareBySlope(float f1, float f2) {
 	return false;
 }
 
-std::vector<float> Geometry::CalculateSlopes(std::vector<Point2d*> v_g) {
+std::vector<float> Geometry::CalculateSlopes(const std::vector<Point2d*> v_g) {
 
 	uint32_t diff_x, diff_y;
 	std::vector<float> v_f;
@@ -93,7 +104,7 @@ std::vector<float> Geometry::CalculateSlopes(std::vector<Point2d*> v_g) {
 	return v_f;
 }
 
-void Geometry::SortBySlope(std::vector<Point2d*>& vertices, std::vector<float> slopes) {
+void Geometry::SortBySlope(std::vector<Point2d*>& vertices, const std::vector<float> slopes) {
 
 	// sort by least negative -> most negative -> 1 -> most positive -> least positive to enforce clockwise traversal of vertices
 	for (int i = 0; i < slopes.size() - 1; i++) {
@@ -153,6 +164,29 @@ void Camera::ClampDirection() {
 	}
 	direction -= (int)(direction / 360) * 360.0f;
 }
+
+void Camera::ClampPosition(Point2d p, Geometry* g) {
+	switch (g->type) 		{
+	case (Geometry::G_LINE):
+	{
+	} break;
+	case (Geometry::G_TRI):
+	{
+
+	} break;
+	case (Geometry::G_RECT):
+	{
+		//if (p.x > g->vertices)
+
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}
+	
+}
+
 void Camera::ClampPosition(Rect panel) {
 
 	if ((px - size / 2) < panel.lt.x) (px = (float)panel.lt.x + size / 2);

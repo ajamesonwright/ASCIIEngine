@@ -7,7 +7,7 @@
 #include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "debug.h"
+#include "Debug.h"
 
 class Point2d {
 
@@ -73,13 +73,15 @@ public:
 		G_NUM_TYPES,
 	};
 	
+	virtual bool Collision(Point2d p) = 0;
+
 protected:
-	int ComparePointsByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v = nullptr, Point2d* p1 = nullptr, Point2d* p2 = nullptr, int begin = -1, int end = -1);
-	std::vector<float> CalculateSlopes(std::vector<Point2d*> v_g);
-	void SortBySlope(std::vector<Point2d*> &vertices, std::vector<float> slopes);
+	int ComparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
+	std::vector<float> CalculateSlopes(const std::vector<Point2d*> v_g);
+	void SortBySlope(std::vector<Point2d*> &vertices, const std::vector<float> slopes);
 private:
-	int ComparePointVectorByCoordinate(uint8_t compare_type, std::vector<Point2d*>* v, int begin = -1, int end = -1);
-	int ComparePointPairByCoordinate(uint8_t compare_type, Point2d* p1, Point2d* p2);
+	int ComparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin = -1, const int end = -1);
+	int ComparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2);
 	bool CompareBySlope(float f1, float f2);
 };
 
@@ -114,23 +116,23 @@ public:
 		vertices.clear();
 		if (index_y != -1) {
 			if (index_y == 0) {
-				vertices.push_back(&a);
-				vertices.push_back(&b);
+				vertices.push_back(new Point2d(a));
+				vertices.push_back(new Point2d(b));
 			} else {
-				vertices.push_back(&b);
-				vertices.push_back(&a);
+				vertices.push_back(new Point2d(b));
+				vertices.push_back(new Point2d(a));
 			}
 			return;
 		}
 		
 		// index_x cannot be -1 otherwise the return statement at the top has already executed
 		if (index_x == 0) {
-			vertices.push_back(&a);
-			vertices.push_back(&b);
+			vertices.push_back(new Point2d(a));
+			vertices.push_back(new Point2d(b));
 			return;
 		}
-		vertices.push_back(&b);
-		vertices.push_back(&a);
+		vertices.push_back(new Point2d(b));
+		vertices.push_back(new Point2d(a));
 	};
 
 	bool Collision(Point2d p) { return false; }
@@ -350,6 +352,7 @@ public:
 	uint16_t turn_speed = 150, move_speed = 1000;
 	Point2d left, right, tip, base;
 	uint8_t fov = 60;
+	uint8_t height = 1800;
 
 	Camera() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
 	Camera(const Camera& source);
@@ -357,8 +360,9 @@ public:
 
 	void Update();
 
-	void SetSize(uint8_t p_size) { size = p_size; };
+	void setSize(uint8_t p_size) { size = p_size; };
 	void ClampDirection();
+	void ClampPosition(Point2d p, Geometry* g);
 	void ClampPosition(Rect panel);
 	void ClampVelocity();
 	void ClampAcceleration();

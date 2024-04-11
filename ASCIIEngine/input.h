@@ -1,8 +1,8 @@
 #include <cstdint>
 #include <wtypes.h>
-#include "debug.h"
+#include "Debug.h"
 #include <vector>
-#include "geometry.h"
+#include "Geometry.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 #ifndef ASCIIENGINE_INPUT_H_
@@ -32,16 +32,16 @@ public:
 
 	ButtonState input_state[KEY_SIZE];
 
-	void ClearInput(bool clear_held = true, bool clear_update = true, int key = -1);
-	void SetInput(MSG* msg, bool is_held);
-	bool GetInput(WPARAM wp);
-	bool GetInput(int key_code);
-	void HandleInput(MSG* msg, float ms_per_frame);
+	void clearInput(bool clear_held = true, bool clear_update = true, int key = -1);
+	void setInput(MSG* msg, bool is_held);
+	bool getInput(WPARAM wp);
+	bool getInput(int key_code);
+	void handleInput(MSG* msg, float ms_per_frame);
 
 private:
 	Camera* camera;
-	int VkToKey(WPARAM wp);
-	void HandleInput(int key_code);
+	int vkToKey(WPARAM wp);
+	void handleInput(int key_code);
 };
 
 #endif

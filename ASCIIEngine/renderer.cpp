@@ -13,7 +13,7 @@ Renderer::DrawArea* Renderer::GetDrawArea() {
 	return &draw_area_;
 }
 
-void Renderer::SetDrawArea(Rect* rect_inc, uint8_t border_width) {
+void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 
 	/*
 	* A draw_area_ object contains information regarding each panel that will be drawn to screen.
@@ -81,18 +81,18 @@ void Renderer::UpdateRenderArea(Camera c, int panel, uint32_t colour, bool valid
 	UpdateRenderArea(right_edge, panel, colour, true);
 }
 
-void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool valid) {
+void Renderer::UpdateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
 
-	switch (g.type) {
+	switch (g->type) {
 	case Geometry::G_LINE:
 	{
-		UpdateRenderArea(static_cast<Line>(g), 0);
+		UpdateRenderArea(static_cast<Line>(*g), 0);
 	} break;
 	case Geometry::G_TRI:
 	{
-		Line l0 = Line(*g.vertices.at(0), *g.vertices.at(1));
-		Line l1 = Line(*g.vertices.at(1), *g.vertices.at(2));
-		Line l2 = Line(*g.vertices.at(2), *g.vertices.at(0));
+		Line l0 = Line(*g->vertices.at(0), *g->vertices.at(1));
+		Line l1 = Line(*g->vertices.at(1), *g->vertices.at(2));
+		Line l2 = Line(*g->vertices.at(2), *g->vertices.at(0));
 		UpdateRenderArea(l0, panel, colour, valid);
 		UpdateRenderArea(l1, panel, colour, valid);
 		UpdateRenderArea(l2, panel, colour, valid);
@@ -100,11 +100,11 @@ void Renderer::UpdateRenderArea(Geometry g, int panel, uint32_t colour, bool val
 	} break;
 	case Geometry::G_RECT:
 	{
-		UpdateRenderArea(static_cast<Rect>(g), 0);
+		UpdateRenderArea(static_cast<Rect>(*g), 0);
 	} break;
 	case Geometry::G_CIRCLE:
 	{
-		UpdateRenderArea(static_cast<Circle>(g), 0);
+		UpdateRenderArea(static_cast<Circle>(*g), 0);
 	} break;
 	}
 }
@@ -350,7 +350,7 @@ int Renderer::GetFocus() {
 	return draw_area_.focus;
 }
 
-void Renderer::SetFocus(int panel) {
+void Renderer::setFocus(int panel) {
 
 	if (draw_area_.lock_focus != -1)
 		return;
@@ -363,7 +363,7 @@ int Renderer::GetFocusLock() {
 	return draw_area_.lock_focus;
 }
 
-void Renderer::SetFocusLock(int panel) {
+void Renderer::setFocusLock(int panel) {
 
 	draw_area_.update = true;
 	if (draw_area_.lock_focus == -1) {
