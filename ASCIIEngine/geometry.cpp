@@ -5,7 +5,7 @@
 * 0b10	- compare X coordinates, s.th. return 0 indicates p1.x is left of p2.x, and return 1 indicates the opposite.
 * 0b101 - compare Y coordinates, s.th. return 0 indicates p1.y is above (lower pixel value) than p2.y, and vice versa.
 */
-int Geometry::ComparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
+int Geometry::comparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
 
 	// Checking for invalid compare_type values
 	if (0b11110000 & compare_type || 0b1000 & compare_type || 0b0000 & compare_type) {
@@ -18,13 +18,13 @@ int Geometry::ComparePointsByCoordinate(const uint8_t compare_type, const std::v
 	}
 
 	if (v)
-		return ComparePointVectorByCoordinate(compare_type, v, begin, end);
+		return comparePointVectorByCoordinate(compare_type, v, begin, end);
 	if (p1 && p2)
-		return ComparePointPairByCoordinate(compare_type, p1, p2);
+		return comparePointPairByCoordinate(compare_type, p1, p2);
 	return -1;
 }
 
-int Geometry::ComparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin, const int end) {
+int Geometry::comparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin, const int end) {
 
 	size_t range_begin, range_end;
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
@@ -49,7 +49,7 @@ int Geometry::ComparePointVectorByCoordinate(const uint8_t compare_type, const s
 	return (int)index;
 }
 
-int Geometry::ComparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2) {
+int Geometry::comparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2) {
 
 	// Compare ->                 X     Y
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
@@ -72,7 +72,7 @@ int Geometry::ComparePointPairByCoordinate(const uint8_t compare_type, const Poi
 	return index;
 }
 
-bool Geometry::CompareBySlope(const float f1, float f2) {
+bool Geometry::compareBySlope(const float f1, float f2) {
 
 	// return indicates if floats are in their correct positions in vector
 	if (f1 < 0) {
@@ -87,7 +87,7 @@ bool Geometry::CompareBySlope(const float f1, float f2) {
 	return false;
 }
 
-std::vector<float> Geometry::CalculateSlopes(const std::vector<Point2d*> v_g) {
+std::vector<float> Geometry::calculateSlopes(const std::vector<Point2d*> v_g) {
 
 	uint32_t diff_x, diff_y;
 	std::vector<float> v_f;
@@ -104,7 +104,7 @@ std::vector<float> Geometry::CalculateSlopes(const std::vector<Point2d*> v_g) {
 	return v_f;
 }
 
-void Geometry::SortBySlope(std::vector<Point2d*>& vertices, const std::vector<float> slopes) {
+void Geometry::sortBySlope(std::vector<Point2d*>& vertices, const std::vector<float> slopes) {
 
 	// sort by least negative -> most negative -> 1 -> most positive -> least positive to enforce clockwise traversal of vertices
 	for (int i = 0; i < slopes.size() - 1; i++) {
@@ -136,15 +136,15 @@ Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
 
 	x = p_x; y = p_y;
 	direction = p_direction;
-	ClampDirection();
+	clampDirection();
 	size = 10;
 	px = (float)p_x; py = (float)p_y;
 	vx = 0.0f; vy = 0.0f;
 	ax = 0.0f; ay = 0.0f;
-	Update();
+	update();
 }
 
-void Camera::Update() {
+void Camera::update() {
 
 	double cosx = cos(direction * M_PI / 180);
 	double siny = sin(direction * M_PI / 180);
@@ -156,7 +156,7 @@ void Camera::Update() {
 	right = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
 }
 
-void Camera::ClampDirection() {
+void Camera::clampDirection() {
 
 	if (direction < 0) {
 		direction = 360.0f - (-direction - (int)(direction / -360) * 360);
@@ -165,7 +165,7 @@ void Camera::ClampDirection() {
 	direction -= (int)(direction / 360) * 360.0f;
 }
 
-void Camera::ClampPosition(Point2d p, Geometry* g) {
+void Camera::clampPosition(Point2d p, Geometry* g) {
 	switch (g->type) 		{
 	case (Geometry::G_LINE):
 	{
@@ -187,7 +187,7 @@ void Camera::ClampPosition(Point2d p, Geometry* g) {
 	
 }
 
-void Camera::ClampPosition(Rect panel) {
+void Camera::clampPosition(Rect panel) {
 
 	if ((px - size / 2) < panel.lt.x) (px = (float)panel.lt.x + size / 2);
 	if ((py - size / 2) < panel.lt.y) (py = (float)panel.lt.y + size / 2);
@@ -195,7 +195,7 @@ void Camera::ClampPosition(Rect panel) {
 	if ((py + size / 2) > panel.rb.y) (py = (float)panel.rb.y - size / 2);
 }
 
-void Camera::ClampVelocity() {
+void Camera::clampVelocity() {
 
 	float limit = 100.0f;
 	if (vx > limit)
@@ -207,7 +207,7 @@ void Camera::ClampVelocity() {
 	if (vy < -limit)
 		vy = -limit;
 }
-void Camera::ClampAcceleration() {
+void Camera::clampAcceleration() {
 
 	float limit = 2000.0f;
 	if (ax > limit) ax = limit;

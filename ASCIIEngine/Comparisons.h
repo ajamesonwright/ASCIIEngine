@@ -10,9 +10,9 @@ using std::vector;
 //int (*ComparePointsByY) (Point2d* p1, Point2d* p2);
 //int (*ComparePointVector) (vector<Point2d*>, int begin, int end);
 
-int ComparePointsByX(Point2d* p1, Point2d* p2) {
+int comparePointsByX(Point2d* p1, Point2d* p2) {
 
 }
-int ComparePointsByY(Point2d* p1, Point2d* p2) {
+int comparePointsByY(Point2d* p1, Point2d* p2) {
 
 }

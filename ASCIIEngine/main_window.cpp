@@ -1,4 +1,4 @@
-#include "MainWindow.h"
+#include "main_window.h"
 
 #include <string>
 #include "Renderer.h"
@@ -18,38 +18,38 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	case WM_MOVE:
 	{
 		// Re-establish rect objects for both main window and draw area
-		Rect temp_mwr = MW::GetMainWindowRect();
+		Rect temp_mwr = MW::getMainWindowRect();
 		MW::setMainWindowRect(hwnd, &temp_mwr);
-		Rect temp_dr = MW::GetDrawRect();
+		Rect temp_dr = MW::getDrawRect();
 		MW::setDrawRect(hwnd, &temp_dr);
 
-		if (MW::GetRenderer()) {
-			MW::renderer_->setDrawArea(&MW::GetDrawRect(), MW::border_width_);
+		if (MW::getRenderer()) {
+			MW::renderer_->setDrawArea(&MW::getDrawRect(), MW::border_width_);
 		}
-		MW::GetRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->ClearRenderArea(true);
 	} break;
 	case WM_SIZE:
 	{
 		// Re-establish rect objects for both main window and draw area
-		Rect& temp_mwr = MW::GetMainWindowRect();
+		Rect& temp_mwr = MW::getMainWindowRect();
 		MW::setMainWindowRect(hwnd, &temp_mwr);
-		Rect& temp_dr = MW::GetDrawRect();
+		Rect& temp_dr = MW::getDrawRect();
 		MW::setDrawRect(hwnd, &temp_dr);
 		// Re-calculate offsets
-		MW::setMTCOffsetX((temp_mwr.GetWidth()) - (temp_dr.GetWidth()) / 2);
-		MW::setMTCOffsetY((temp_mwr.GetHeight() - (temp_dr.GetHeight()) - 31) / 2);
+		MW::setMTCOffsetX((temp_mwr.getWidth()) - (temp_dr.getWidth()) / 2);
+		MW::setMTCOffsetY((temp_mwr.getHeight() - (temp_dr.getHeight()) - 31) / 2);
 
 		// executed once per program run
 		bool first_pass = false;
-		if (!MW::GetRenderer()) {
+		if (!MW::getRenderer()) {
 			MW::renderer_ = new Renderer(&temp_dr, MW::border_width_);
 			first_pass = true;
 		}
 
-		if (MW::GetRenderer() && !first_pass) {
+		if (MW::getRenderer() && !first_pass) {
 			MW::renderer_->setDrawArea(&temp_dr, MW::border_width_);
 		}
-		MW::GetRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->ClearRenderArea(true);
 	} break;
 	case WM_KEYDOWN:
 	{
@@ -63,7 +63,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		{
 			MW::input_->clearInput();
 			// clear focus lock or exit if no lock present
-			int locked = MW::GetRenderer()->GetFocusLock();
+			int locked = MW::getRenderer()->GetFocusLock();
 			if (locked != -1) {
 				Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::PANEL_LOCK);
 				dbg.setMsg(&MW::event_message);
@@ -71,8 +71,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 				dbg.setLockedPanel(locked);
 				Debug::Print(&dbg);
 
-				MW::GetRenderer()->setFocusLock(-1);
-				MW::GetRenderer()->UpdateRenderArea(MW::GetRenderer()->GetDrawArea()->panels[locked], locked, MW::GetRenderer()->colours[locked][MW::current_panel_ == locked ? 1 : 0], true);
+				MW::getRenderer()->setFocusLock(-1);
+				MW::getRenderer()->UpdateRenderArea(MW::getRenderer()->GetDrawArea()->panels[locked], locked, MW::getRenderer()->colours[locked][MW::current_panel_ == locked ? 1 : 0], true);
 				break;
 			}
 			MW::setRunningState(STOPPED);
@@ -93,11 +93,11 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 
 		// Reset TOP_DOWN panel
 		if (MW::current_panel_ != Renderer::TOP_DOWN) {
-			MW::renderer_->UpdateRenderArea(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN), Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
+			MW::renderer_->UpdateRenderArea(*MW::getDrawAreaPanel(Renderer::TOP_DOWN), Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
 		}
 		// Reset FIRST_PERSON panel
 		if (MW::current_panel_ != Renderer::FIRST_PERSON) {
-			MW::renderer_->UpdateRenderArea(*MW::GetDrawAreaPanel(Renderer::FIRST_PERSON), Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
+			MW::renderer_->UpdateRenderArea(*MW::getDrawAreaPanel(Renderer::FIRST_PERSON), Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
 		}
 		if (MW::current_panel_ == Renderer::BACKGROUND)
 			break;
@@ -113,8 +113,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.Print();
 		}
 
-		if (MW::GetRenderer()->GetFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
-			MW::GetRenderer()->setFocusLock(MW::current_panel_);
+		if (MW::getRenderer()->GetFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
+			MW::getRenderer()->setFocusLock(MW::current_panel_);
 			Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::PANEL_LOCK);
 			dbg.setMsg(&MW::event_message);
 			dbg.setPanelId(MW::current_panel_);
@@ -122,7 +122,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			break;
 		}
 
-		if (MW::GetRenderer()->GetFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
+		if (MW::getRenderer()->GetFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
 			MW::geo_start = MW::event_message.pt;
 			MW::input_->input_state[ML_DOWN].held = true;
 			MW::input_->input_state[ML_DOWN].update = true;
@@ -145,10 +145,10 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			break;
 
 		// Check for top-down focus lock before calculating square end point
-		if (MW::GetRenderer()->GetFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
+		if (MW::getRenderer()->GetFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
 			MW::geo_end = MW::event_message.pt;
 
-			if (MW::geo_start.Displacement(MW::geo_end) > 10) {
+			if (MW::geo_start.displacementFrom(MW::geo_end) > 10) {
 				Rect* rect = new Rect(MW::geo_start, MW::geo_end);
 				Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 				dbg.setMsg(&MW::event_message);
@@ -157,7 +157,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 				dbg.setGeometry(rect);
 				dbg.Print();
 
-				MW::AddGeometry(rect);
+				MW::addGeometry(rect);
 				//Debug::DebugMessage dbg2(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::QUADTREE_TOSTRING);
 				//dbg2.setOutputString(MW::qt->ToString());
 				//dbg2.Print();
@@ -170,7 +170,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	} break;
 	case WM_RBUTTONUP:
 	{
-		if (MW::geometry_queue.size() > 0 && MW::GetRenderer()->GetFocusLock() == Renderer::TOP_DOWN) {
+		if (MW::geometry_queue.size() > 0 && MW::getRenderer()->GetFocusLock() == Renderer::TOP_DOWN) {
 			Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 			dbg.setMsg(&MW::event_message);
 			dbg.setPanelId(MW::current_panel_);
@@ -178,9 +178,9 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.setGeometry(MW::geometry_queue.back());
 			dbg.Print();
 			MW::geometry_queue.pop_back();
-			MW::GetRenderer()->GetDrawArea()->update = true;
+			MW::getRenderer()->GetDrawArea()->update = true;
 		}
-		MW::GetRenderer()->ClearRenderArea();
+		MW::getRenderer()->ClearRenderArea();
 	} break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
@@ -189,8 +189,8 @@ return 0;
 }
 
 static void CleanUp() {
-	MW::GetRenderer()->CleanUp();
-	delete MW::GetRenderer();
+	MW::getRenderer()->CleanUp();
+	delete MW::getRenderer();
 	delete MW::input_;
 	for (int i = MW::geometry_queue.size() - 1; i >= 0; i--) {
 		delete MW::geometry_queue.at(i);
@@ -247,22 +247,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// Calculate offsets between client window and main window
 	{
-		MW::setMTCOffsetX(((MW::main_rect.GetWidth()) - (MW::draw_rect.GetWidth())) / 2);
-		MW::setMTCOffsetY(((MW::main_rect.GetHeight()) - (MW::draw_rect.GetHeight()) - 31) / 2);
+		MW::setMTCOffsetX(((MW::main_rect.getWidth()) - (MW::draw_rect.getWidth())) / 2);
+		MW::setMTCOffsetY(((MW::main_rect.getHeight()) - (MW::draw_rect.getHeight()) - 31) / 2);
 	}
 
 	// set initial inputs
 	MW::input_ = new Input(&MW::camera);
 	// Clear DrawArea
-	MW::GetRenderer()->ClearRenderArea(true);
+	MW::getRenderer()->ClearRenderArea(true);
 	// set initial viewport location and orientation
 	{
-		Rect* td_panel = MW::GetDrawAreaPanel(Renderer::TOP_DOWN);
-		MW::camera = Camera(td_panel->lt.x + td_panel->GetWidth() / 2, td_panel->lt.y + td_panel->GetHeight() / 2, -90);
+		Rect* td_panel = MW::getDrawAreaPanel(Renderer::TOP_DOWN);
+		MW::camera = Camera(td_panel->lt.x + td_panel->getWidth() / 2, td_panel->lt.y + td_panel->getHeight() / 2, -90);
 		MW::camera.setSize(20);
 	}
 
-	MW::qt = new Quadtree(MW::GetDrawRect());
+	MW::qt = new Quadtree(MW::getDrawRect());
 	//Point2d* p1 = new Point2d(100, 300);
 	//MW::qt->AssignPoint(p1);
 	////delete p1;
@@ -303,15 +303,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	}
 
 	// Program loop
-	while (MW::GetRunningState()) {
+	while (MW::getRunningState()) {
 		// Reset inputs
 		MW::input_->clearInput(0, 1);
-		MW::GetRenderer()->ClearRenderArea();
+		MW::getRenderer()->ClearRenderArea();
 		// Main message loop
 		while (PeekMessage(&MW::event_message, hwnd, 0, 0, PM_REMOVE)) {
 			// Update panel under mouseover for highlight
-			MW::ConditionMouseCoords(MW::event_message.pt);
-			MW::current_panel_ = MW::GetCursorFocus((Point2d)MW::event_message.pt);
+			MW::conditionMouseCoords(MW::event_message.pt);
+			MW::current_panel_ = MW::getCursorFocus((Point2d)MW::event_message.pt);
 
 			bool is_held = ((MW::event_message.lParam & (1U << 31)) == 0);
 			MW::input_->setInput(&MW::event_message, is_held);
@@ -322,12 +322,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		// Perform actions for updated input_
 		MW::input_->handleInput(&MW::event_message, dt);
-		MW::SimulateFrame(dt);
+		MW::simulateFrame(dt);
 
-		MW::GetRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->ClearRenderArea(true);
 		// Draw highlight line for click and hold
-		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::GetRenderer()->GetFocusLock() == 0) {
-			MW::GetRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
+		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->GetFocusLock() == 0) {
+			MW::getRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
 		// Draw geometry queue from oldest to newest
 		MW::renderer_->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
@@ -335,12 +335,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			MW::renderer_->UpdateRenderArea(MW::geometry_queue[i], Renderer::TOP_DOWN);
 		}
 		// Draw quadtree grid
-		std::vector<Line*>* grid = MW::qt->GetQuadtreeGrid();
+		std::vector<Line*>* grid = MW::qt->getQuadtreeGrid();
 		for (int i = 0; i < grid->size(); i++) {
-			MW::GetRenderer()->UpdateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, false);
+			MW::getRenderer()->UpdateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, false);
 		}
 		// Draw updated RenderArea to screen
-		MW::GetRenderer()->DrawRenderArea(hdc);
+		MW::getRenderer()->DrawRenderArea(hdc);
 
 		QueryPerformanceCounter(&frame_end_time);
 		dt = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / frame_update_frequency;
@@ -355,15 +355,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	return 0;
 }
 
-Renderer* MainWindow::GetRenderer() {
+Renderer* MainWindow::getRenderer() {
 	return renderer_;
 }
 
-Rect* MainWindow::GetDrawAreaPanel(int panel) {
+Rect* MainWindow::getDrawAreaPanel(int panel) {
 	return &MW::renderer_->GetDrawArea()->panels[panel];
 }
 
-bool MainWindow::GetRunningState() {
+bool MainWindow::getRunningState() {
 	return MW::run_state_;
 }
 
@@ -390,38 +390,38 @@ void MainWindow::setDrawMode(int p_draw_mode) {
 	MW::draw_mode_ = p_draw_mode;
 }
 
-int MainWindow::GetCursorFocus(Point2d p) {
+int MainWindow::getCursorFocus(Point2d p) {
 
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-		if (MW::GetRenderer()->GetDrawArea()->panels[i].Collision(p)) {
+		if (MW::getRenderer()->GetDrawArea()->panels[i].collidesWith(p)) {
 			return i;
 		}
 	}
 	return -1;
 }
 
-void MainWindow::AddGeometry(Geometry* g) {
+void MainWindow::addGeometry(Geometry* g) {
 
 	MW::geometry_queue.push_back(g);
-	MW::qt->AddGeometry(g);
+	MW::qt->addGeometry(g);
 }
 
-void MainWindow::RemoveGeometry(Geometry* g) {
+void MainWindow::removeGeometry(Geometry* g) {
 
 	MW::geometry_queue.pop_back();
-	MW::qt->RemoveGeometry(g);
+	MW::qt->removeGeometry(g);
 }
 
-void MainWindow::SimulateFrame(float dt) {
+void MainWindow::simulateFrame(float dt) {
 
 	// Damping effect on acceleration
 	MW::camera.ax = MW::camera.ax * 0.70f;
 	MW::camera.ay = MW::camera.ay * 0.70f;
-	MW::camera.ClampAcceleration();
+	MW::camera.clampAcceleration();
 	// v = v + a*t
 	MW::camera.vx = (MW::camera.vx + MW::camera.ax * dt) * 0.90f;
 	MW::camera.vy = (MW::camera.vy + MW::camera.ay * dt) * 0.90f;
-	MW::camera.ClampVelocity();
+	MW::camera.clampVelocity();
 
 	float delta_px = MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
 	float delta_py = MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
@@ -435,8 +435,8 @@ void MainWindow::SimulateFrame(float dt) {
 	MW::camera.py = MW::camera.py + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
 	MW::camera.x = (uint32_t)(MW::camera.px + 0.75); // 0.75 added to account for truncation due to cast
 	MW::camera.y = (uint32_t)(MW::camera.py + 0.75);
-	MW::camera.ClampPosition(*MW::GetDrawAreaPanel(Renderer::TOP_DOWN));
-	MW::camera.Update();
+	MW::camera.clampPosition(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
+	MW::camera.update();
 
 	Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, CAMERA_STATUS);
 	dbg.setMsg(&MW::event_message);
@@ -446,16 +446,16 @@ void MainWindow::SimulateFrame(float dt) {
 }
 
 // Find the appropriate memory address that reflects the lower left point of the geometry object
-void* MainWindow::FindMemoryHandle(Geometry* g) {
+void* MainWindow::findMemoryHandle(Geometry* g) {
 
-	return MW::GetRenderer()->GetMemoryLocation(0, *g->vertices.at(0));
+	return MW::getRenderer()->GetMemoryLocation(0, *g->vertices.at(0));
 }
 
 void MainWindow::setWindowHeight(uint16_t p_height) {
 	MW::window_height_ = p_height;
 }
 
-uint16_t MainWindow::GetWindowHeight() {
+uint16_t MainWindow::getWindowHeight() {
 	return MW::window_height_;
 }
 
@@ -463,7 +463,7 @@ void MainWindow::setWindowWidth(uint16_t p_width) {
 	MW::window_width_ = p_width;
 }
 
-uint16_t MainWindow::GetWindowWidth() {
+uint16_t MainWindow::getWindowWidth() {
 	return MW::window_width_;
 }
 
@@ -471,7 +471,7 @@ void MainWindow::setWindowOffsetX(uint16_t p_offset) {
 	MW::xPos_ = p_offset;
 }
 
-uint16_t MainWindow::GetWindowOffsetX() {
+uint16_t MainWindow::getWindowOffsetX() {
 	return MW::xPos_;
 }
 
@@ -479,7 +479,7 @@ void MainWindow::setWindowOffsetY(uint16_t p_offset) {
 	yPos_ = p_offset;
 }
 
-uint16_t MainWindow::GetWindowOffsetY() {
+uint16_t MainWindow::getWindowOffsetY() {
 	return MW::yPos_;
 }
 
@@ -487,7 +487,7 @@ void MainWindow::setMTCOffsetX(uint8_t p_offset_x) {
 	MW::main_to_client_offset_x_ = p_offset_x;
 }
 
-uint8_t MainWindow::GetMTCOffsetX() {
+uint8_t MainWindow::getMTCOffsetX() {
 	return MW::main_to_client_offset_x_;
 }
 
@@ -495,11 +495,11 @@ void MainWindow::setMTCOffsetY(uint8_t p_offset_y) {
 	MW::main_to_client_offset_y_ = p_offset_y;
 }
 
-uint8_t MainWindow::GetMTCOffsetY() {
+uint8_t MainWindow::getMTCOffsetY() {
 	return MW::main_to_client_offset_y_;
 }
 
-Rect& MainWindow::GetMainWindowRect() {
+Rect& MainWindow::getMainWindowRect() {
 	return main_rect;
 }
 
@@ -510,7 +510,7 @@ void MainWindow::setMainWindowRect(HWND hwnd, Rect* rect) {
 	MW::main_rect = mwr;
 }
 
-Rect& MainWindow::GetDrawRect() {
+Rect& MainWindow::getDrawRect() {
 	
 	return draw_rect;
 }
@@ -522,18 +522,18 @@ void MainWindow::setDrawRect(HWND hwnd, Rect* rect) {
 	MW::draw_rect = dr;
 }
 
-void MainWindow::ConditionMouseCoords(Point2d& p) {
+void MainWindow::conditionMouseCoords(Point2d& p) {
 
 	// condition mouse cursor coordinates to be within range
 	// 31 pixels is fixed for Y dimension due to title bar
-	p.y -= (MW::GetMainWindowRect().lt.y + 31);
-	p.x -= (MW::GetMainWindowRect().lt.x + MW::GetMTCOffsetX());
+	p.y -= (MW::getMainWindowRect().lt.y + 31);
+	p.x -= (MW::getMainWindowRect().lt.x + MW::getMTCOffsetX());
 }
 
-void MainWindow::ConditionMouseCoords(POINT& p) {
+void MainWindow::conditionMouseCoords(POINT& p) {
 
 	// condition mouse cursor coordinates to be within range
 	// 31 pixels is fixed for Y dimension due to title bar
-	p.y -= (MW::GetMainWindowRect().lt.y + 31);
-	p.x -= (MW::GetMainWindowRect().lt.x + MW::GetMTCOffsetX());
+	p.y -= (MW::getMainWindowRect().lt.y + 31);
+	p.x -= (MW::getMainWindowRect().lt.x + MW::getMTCOffsetX());
 }

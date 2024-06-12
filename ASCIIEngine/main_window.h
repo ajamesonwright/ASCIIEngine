@@ -47,48 +47,48 @@ namespace MainWindow {
 
 	MSG event_message;
 
-	Renderer* GetRenderer();
-	Rect* GetDrawAreaPanel(int panel);
+	Renderer* getRenderer();
+	Rect* getDrawAreaPanel(int panel);
 
-	bool GetRunningState();
+	bool getRunningState();
 	void setRunningState(int p_run_state);
 	void setDrawMode(int p_draw_mode);
-	int GetCursorFocus(Point2d p);
+	int getCursorFocus(Point2d p);
 
-	void AddGeometry(Geometry* g);
-	void RemoveGeometry(Geometry* g);
-	void SimulateFrame(float s_per_frame);
+	void addGeometry(Geometry* g);
+	void removeGeometry(Geometry* g);
+	void simulateFrame(float s_per_frame);
 
-	void* FindMemoryHandle(Geometry* g);
+	void* findMemoryHandle(Geometry* g);
 
 	void setWindowHeight(uint16_t p_height);
-	uint16_t GetWindowHeight();
+	uint16_t getWindowHeight();
 	void setWindowWidth(uint16_t p_width);
-	uint16_t GetWindowWidth();
+	uint16_t getWindowWidth();
 	void setWindowOffsetX(uint16_t p_offset);
-	uint16_t GetWindowOffsetX();
+	uint16_t getWindowOffsetX();
 	void setWindowOffsetY(uint16_t p_offset);
-	uint16_t GetWindowOffsetY();
+	uint16_t getWindowOffsetY();
 	void setMTCOffsetX(uint8_t p_offset_x);
-	uint8_t GetMTCOffsetX();
+	uint8_t getMTCOffsetX();
 	void setMTCOffsetY(uint8_t p_offset_y);
-	uint8_t GetMTCOffsetY();
+	uint8_t getMTCOffsetY();
 
-	Rect& GetMainWindowRect();
+	Rect& getMainWindowRect();
 	void setMainWindowRect(HWND hwnd, Rect* rect);
-	Rect& GetDrawRect();
+	Rect& getDrawRect();
 	void setDrawRect(HWND hwnd, Rect* rect);
 
-	void ConditionMouseCoords(Point2d& p);
-	void ConditionMouseCoords(POINT& p);
+	void conditionMouseCoords(Point2d& p);
+	void conditionMouseCoords(POINT& p);
 };
 
-enum run_state {
+enum RunState {
 	STOPPED,
 	RUNNING,
 };
 
-enum draw_mode {
+enum DrawMode {
 	D_LINE,
 	D_TRI,
 	D_RECT,

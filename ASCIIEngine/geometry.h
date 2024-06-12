@@ -29,7 +29,7 @@ public:
 		return x == obj.x && y == obj.y;
 	}
 
-	int Displacement(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
+	int displacementFrom(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
 };
 
 class Point3d : public Point2d {
@@ -63,7 +63,7 @@ public:
 		}
 	};
 
-	enum geometry_type {
+	enum GeometryType {
 		G_LINE,
 		G_TRI,
 		G_RECT,
@@ -73,16 +73,16 @@ public:
 		G_NUM_TYPES,
 	};
 	
-	virtual bool Collision(Point2d p) = 0;
+	virtual bool collidesWith(Point2d p) = 0;
 
 protected:
-	int ComparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
-	std::vector<float> CalculateSlopes(const std::vector<Point2d*> v_g);
-	void SortBySlope(std::vector<Point2d*> &vertices, const std::vector<float> slopes);
+	int comparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
+	std::vector<float> calculateSlopes(const std::vector<Point2d*> v_g);
+	void sortBySlope(std::vector<Point2d*> &vertices, const std::vector<float> slopes);
 private:
-	int ComparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin = -1, const int end = -1);
-	int ComparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2);
-	bool CompareBySlope(float f1, float f2);
+	int comparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin = -1, const int end = -1);
+	int comparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2);
+	bool compareBySlope(float f1, float f2);
 };
 
 class Line : public Geometry {
@@ -110,8 +110,8 @@ public:
 		if (a == b)
 			return;
 
-		int index_y = ComparePointsByCoordinate(0b101, nullptr, &a, &b);
-		int index_x = ComparePointsByCoordinate(0b10, nullptr, &a, &b);
+		int index_y = comparePointsByCoordinate(0b101, nullptr, &a, &b);
+		int index_x = comparePointsByCoordinate(0b10, nullptr, &a, &b);
 		
 		vertices.clear();
 		if (index_y != -1) {
@@ -135,7 +135,7 @@ public:
 		vertices.push_back(new Point2d(a));
 	};
 
-	bool Collision(Point2d p) { return false; }
+	bool collidesWith(Point2d p) { return false; }
 };
 
 class Tri : public Geometry {
@@ -165,16 +165,16 @@ public:
 
 		vertices.clear();
 		vertices.push_back(&a); vertices.push_back(&b); vertices.push_back(&c);
-		int index = ComparePointsByCoordinate(0b101, &vertices);
+		int index = comparePointsByCoordinate(0b101, &vertices);
 		if (index != 0)
 			std::swap(vertices.at(0), vertices.at(index));
 		// currently would not account for points with the same x-coord (TODO: implement binary int return type and masking for decode)
-		index = ComparePointsByCoordinate(0b10, &vertices, nullptr, nullptr, 1);
+		index = comparePointsByCoordinate(0b10, &vertices, nullptr, nullptr, 1);
 		if (index != 1)
 			std::swap(*vertices.at(1), *vertices.at(index));
 	};
 
-	bool Collision(Point2d p) { return false; }
+	bool collidesWith(Point2d p) { return false; }
 };
 
 // Four-sided shape that assumes orthogonal sides 
@@ -252,9 +252,9 @@ public:
 		vertices.push_back(&rb);
 	};
 
-	int GetWidth() { return this->rb.x - this->lt.x; };
-	int GetHeight() { return this->rb.y - this->lt.y; };
-	bool Collision(Point2d p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
+	int getWidth() { return this->rb.x - this->lt.x; };
+	int getHeight() { return this->rb.y - this->lt.y; };
+	bool collidesWith(Point2d p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
 };
 
 class Quad : public Geometry {
@@ -305,7 +305,7 @@ class Quad : public Geometry {
 		//}*/
 	}
 
-	bool Collision(Point2d p) { return false; }
+	bool collidesWith(Point2d p) { return false; }
 };
 
 class Circle : public Geometry {
@@ -330,7 +330,7 @@ public:
 		vertices.push_back(&center);
 		r = 30;
 	}
-	bool Collision(Point2d p) { return center.Displacement(p) <= r; }
+	bool collidesWith(Point2d p) { return center.displacementFrom(p) <= r; }
 };
 
 class Ray2d : public Point2d {
@@ -358,14 +358,14 @@ public:
 	Camera(const Camera& source);
 	Camera(uint32_t p_x, uint32_t p_y, float p_direction);
 
-	void Update();
+	void update();
 
 	void setSize(uint8_t p_size) { size = p_size; };
-	void ClampDirection();
-	void ClampPosition(Point2d p, Geometry* g);
-	void ClampPosition(Rect panel);
-	void ClampVelocity();
-	void ClampAcceleration();
+	void clampDirection();
+	void clampPosition(Point2d p, Geometry* g);
+	void clampPosition(Rect panel);
+	void clampVelocity();
+	void clampAcceleration();
 };
 
 struct Ray3d : public Point3d {

@@ -45,7 +45,7 @@ void Input::handleInput(MSG* msg, float dt) {
 	Debug::Print(&dbg);
 	if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
 	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);
-	camera->ClampDirection();
+	camera->clampDirection();
 
 	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
 	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;

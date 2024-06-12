@@ -11,7 +11,7 @@ class Renderer {
 public:
 	bool instanced = false;
 
-	enum panel {
+	enum Panel {
 		TOP_DOWN,
 		FIRST_PERSON,
 		BACKGROUND,

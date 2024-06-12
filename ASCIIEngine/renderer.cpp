@@ -27,8 +27,8 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 
 	draw_area_.xPos = rect.lt.x;
 	draw_area_.yPos = rect.rb.y;
-	draw_area_.width = rect.GetWidth();
-	draw_area_.height = rect.GetHeight();
+	draw_area_.width = rect.getWidth();
+	draw_area_.height = rect.getHeight();
 
 	data_size = (draw_area_.width * draw_area_.height) * sizeof(uint32_t);
 
@@ -47,8 +47,8 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.bmi.bmiHeader.biCompression = BI_RGB;
 
 	// Add 1 additional pixel to top point coordinate to make sure we're working with even numbers for height
-	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.lt.x + border_width, rect.lt.y + border_width + 1), Point2d(rect.GetWidth() / 2 - border_width, rect.rb.y - border_width));
-	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.GetWidth() / 2 + border_width, rect.lt.y + border_width + 1), Point2d(rect.rb.x - border_width, rect.rb.y - border_width));
+	draw_area_.panels[TOP_DOWN] = Rect(Point2d(rect.lt.x + border_width, rect.lt.y + border_width + 1), Point2d(rect.getWidth() / 2 - border_width, rect.rb.y - border_width));
+	draw_area_.panels[FIRST_PERSON] = Rect(Point2d(rect.getWidth() / 2 + border_width, rect.lt.y + border_width + 1), Point2d(rect.rb.x - border_width, rect.rb.y - border_width));
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
@@ -287,10 +287,10 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 				width = 0;
 
 				current_pixel = Point2d(j, draw_area_.height - i);
-				if (draw_area_.panels[TOP_DOWN].Collision(current_pixel)) {
+				if (draw_area_.panels[TOP_DOWN].collidesWith(current_pixel)) {
 					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
-					width = draw_area_.panels[TOP_DOWN].GetWidth();
+					width = draw_area_.panels[TOP_DOWN].getWidth();
 					// set colour depending on cursor location and whether the panel focus has been locked
 					colour = colours[TOP_DOWN][0];
 					if (draw_area_.lock_focus == TOP_DOWN || (draw_area_.focus == TOP_DOWN && draw_area_.lock_focus == -1)) {
@@ -299,10 +299,10 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 					*pixel++ = colour;
 					continue;
 				}
-				if (draw_area_.panels[FIRST_PERSON].Collision(current_pixel)) {
+				if (draw_area_.panels[FIRST_PERSON].collidesWith(current_pixel)) {
 					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
-					width = draw_area_.panels[FIRST_PERSON].GetWidth();
+					width = draw_area_.panels[FIRST_PERSON].getWidth();
 					// set colour depending on cursor location and whether the panel focus has been locked
 					colour = colours[FIRST_PERSON][0];
 					if (draw_area_.lock_focus == FIRST_PERSON || (draw_area_.focus == FIRST_PERSON && draw_area_.lock_focus == -1)) {

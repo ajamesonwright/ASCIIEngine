@@ -8,7 +8,7 @@
 #ifndef ASCIIENGINE_INPUT_H_
 #define ASCIIENGINE_INPUT_H_
 
-enum keys {
+enum Keys {
 	ML_DOWN,
 	W_DOWN,
 	A_DOWN,

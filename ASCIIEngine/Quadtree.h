@@ -29,35 +29,35 @@ private:
 		Quadrant(uint32_t p_x0, uint32_t p_y0, uint32_t p_x1, uint32_t p_y1) { x0 = p_x0; x1 = p_x1; y0 = p_y0; y1 = p_y1; };
 		~Quadrant();
 		
-		void AssignPoint(Point2d* p_p, std::vector<Line*>* lines);
-		void UnassignPoint(Point2d* p_p, std::vector<Line*>* lines);
-		uint32_t GetWidth() { return x1 - x0; };
-		uint32_t GetHeight() { return y0 - y1; };
+		void assignPoint(Point2d* p_p, std::vector<Line*>* lines);
+		void unassignPoint(Point2d* p_p, std::vector<Line*>* lines);
+		uint32_t getWidth() { return x1 - x0; };
+		uint32_t getHeight() { return y0 - y1; };
 
 		Point2d* getPoint();
 		std::vector<Quadrant*> getChildren();
-		bool Collision(Point2d* p) { return (p->x >= x0 && p->x <= x1 && p->y <= y0 && p->y >= y1); };
-		bool IsParent() { return children.size() > 0; };
-		Quadrant* FindChildQuadrant(Point2d* p_p);
-		void GetGridLines(std::vector<Line*>& quadtree_lines);
-		std::string ToString(int depth);
+		bool collidesWith(Point2d* p) { return (p->x >= x0 && p->x <= x1 && p->y <= y0 && p->y >= y1); };
+		bool isParent() { return children.size() > 0; };
+		Quadrant* findChildQuadrant(Point2d* p_p);
+		void getGridLines(std::vector<Line*>& quadtree_lines);
+		std::string toString(int depth);
 	};
 	Quadrant* root;
 
 protected:
-	Point2d* GetPoint(Quadrant* q);
+	Point2d* getPoint(Quadrant* q);
 	std::vector<Line*> getGridLines();
-	void AssignPoint(Point2d* p);
-	void UnassignPoint(Point2d* p);
+	void assignPoint(Point2d* p);
+	void unassignPoint(Point2d* p);
 	
 public:
-	void UpdateGridLines(std::vector<Geometry*> queue);
-	void AddGeometry(Geometry* g);
-	void RemoveGeometry(Geometry* g);
+	void updateGridLines(std::vector<Geometry*> queue);
+	void addGeometry(Geometry* g);
+	void removeGeometry(Geometry* g);
 
-	std::vector<Line*>* GetQuadtreeGrid();
-	void GetQuadtreeGrid(Quadrant* ptr, std::vector<Line*> lines);
-	std::string ToString();
+	std::vector<Line*>* getQuadtreeGrid();
+	void getQuadtreeGrid(Quadrant* ptr, std::vector<Line*> lines);
+	std::string toString();
 };
 
 
