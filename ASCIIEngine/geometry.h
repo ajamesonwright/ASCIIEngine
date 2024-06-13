@@ -7,7 +7,7 @@
 #include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "Debug.h"
+#include "debug.h"
 
 class Point2d {
 

@@ -1,6 +1,6 @@
-#include "Debug.h"
-#include "Geometry.h"
-#include "Input.h"
+#include "debug.h"
+#include "geometry.h"
+#include "input.h"
 
 // current flag used to determine which debug messaging types are active
 /*  Print flag decoding

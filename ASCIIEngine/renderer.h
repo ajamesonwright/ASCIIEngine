@@ -66,37 +66,37 @@ public:
 	const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
-	DrawArea* GetDrawArea();
+	DrawArea* getDrawArea();
 	void setDrawArea(Rect* rect, uint8_t border_width);
-	void UpdateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
-	void UpdateRenderArea(Camera c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void UpdateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
-	void RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void UpdateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
-	void UpdateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
-	void UpdateRenderArea(Circle c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
-	void UpdateGeometry();
-	void DrawRenderArea(HDC hdc);
-	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
-	int GetFocus();
+	void updateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
+	void updateRenderArea(Camera c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void updateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void updateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
+	void renderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void renderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void updateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
+	void updateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
+	void updateRenderArea(Circle c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
+	void updateGeometry();
+	void drawRenderArea(HDC hdc);
+	void clearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
+	int getFocus();
 	void setFocus(int panel);
-	int GetFocusLock();
+	int getFocusLock();
 	void setFocusLock(int panel);
-	void CleanUp();
+	void cleanUp();
 
-	void* GetMemoryLocation(int panel, Point2d p);
+	void* getMemoryLocation(int panel, Point2d p);
 
 private:
 	DrawArea draw_area_;
 
-	bool Validate(Point2d p, int panel = -1);
-	bool Validate(Camera c, int panel = -1);
-	bool Validate(Line l, int panel = -1);
-	bool Validate(Rect rect, int panel = -1);
-	bool Validate(Circle c, int panel = -1);
-	Line ClipLine(Line l);
+	bool validate(Point2d p, int panel = -1);
+	bool validate(Camera c, int panel = -1);
+	bool validate(Line l, int panel = -1);
+	bool validate(Rect rect, int panel = -1);
+	bool validate(Circle c, int panel = -1);
+	Line clipLine(Line l);
 };
 
 #endif

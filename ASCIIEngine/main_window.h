@@ -5,9 +5,9 @@
 #include <windowsx.h>
 #include <stdint.h>
 #include <vector>
-#include "Geometry.h"
-#include "Input.h"
-#include "Quadtree.h"
+#include "geometry.h"
+#include "input.h"
+#include "quadtree.h"
 
 // shorten name, make it easier to use
 #define MW MainWindow

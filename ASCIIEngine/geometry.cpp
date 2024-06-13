@@ -1,4 +1,4 @@
-#include "Geometry.h"
+#include "geometry.h"
 
 /*
 * Take in a binary mask compare type and perform the associated comparison of geometry coordinates.

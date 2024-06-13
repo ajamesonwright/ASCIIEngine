@@ -1,4 +1,4 @@
-#include "Input.h"
+#include "input.h"
 
 void Input::clearInput(bool clear_held, bool clear_update, int key) {
 	int range_begin = 0;

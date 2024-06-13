@@ -2,7 +2,7 @@
 #define ASCIIENGINE_QUADTREE_H_
 
 #include <cstdint>
-#include "Geometry.h"
+#include "geometry.h"
 #include <sstream>
 
 class Quadtree {
@@ -13,30 +13,33 @@ public:
 
 private:
 	std::vector<Line*> gridLines;
-	class Quadrant {
+	struct Quadrant {
 		// X and Y positions referenced from bottom left to top right (matches draw_area_ indexing)
-		uint32_t x0, x1, y0, y1;
+		uint32_t left;
+		uint32_t right;
+		uint32_t top;
+		uint32_t bottom;
 		Point2d* p = nullptr;
 		//Quadrant* parent;
 		std::vector<Quadrant*> children; // Quadrants indexed bottom left, clockwise around
-		uint32_t getLeft() { return x0; };
-		uint32_t getRight() { return x1; };
-		uint32_t getTop() { return y0; };
-		uint32_t getBottom() { return y1; };
+		uint32_t getLeft() { return left; };
+		uint32_t getRight() { return right; };
+		uint32_t getTop() { return top; };
+		uint32_t getBottom() { return bottom; };
 
 	public:
-		Quadrant() { x0 = 0; x1 = 0; y0 = 0; y1 = 0; };
-		Quadrant(uint32_t p_x0, uint32_t p_y0, uint32_t p_x1, uint32_t p_y1) { x0 = p_x0; x1 = p_x1; y0 = p_y0; y1 = p_y1; };
+		Quadrant() { left = 0; right = 0; top = 0; bottom = 0; };
+		Quadrant(uint32_t left, uint32_t bottom, uint32_t right, uint32_t top) { this->left = left; this->right = right; this->top = top; this->bottom = bottom; };
 		~Quadrant();
 		
 		void assignPoint(Point2d* p_p, std::vector<Line*>* lines);
 		void unassignPoint(Point2d* p_p, std::vector<Line*>* lines);
-		uint32_t getWidth() { return x1 - x0; };
-		uint32_t getHeight() { return y0 - y1; };
+		uint32_t getWidth() { return right - left; };
+		uint32_t getHeight() { return bottom - top; };
 
 		Point2d* getPoint();
 		std::vector<Quadrant*> getChildren();
-		bool collidesWith(Point2d* p) { return (p->x >= x0 && p->x <= x1 && p->y <= y0 && p->y >= y1); };
+		bool collidesWith(Point2d* p) { return (p->x >= left && p->x <= right && p->y >= top && p->y <= bottom); }; // top and bottom refer to their respective locales on screen but the row count is reversed due to how the draw area is index
 		bool isParent() { return children.size() > 0; };
 		Quadrant* findChildQuadrant(Point2d* p_p);
 		void getGridLines(std::vector<Line*>& quadtree_lines);

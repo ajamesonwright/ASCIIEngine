@@ -9,7 +9,7 @@ Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 	draw_area_ = DrawArea();
 }
 
-Renderer::DrawArea* Renderer::GetDrawArea() {
+Renderer::DrawArea* Renderer::getDrawArea() {
 	return &draw_area_;
 }
 
@@ -52,10 +52,10 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
-void Renderer::UpdateRenderArea(Point2d p, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Point2d p, int panel, uint32_t colour, bool valid) {
 
 	if (!valid)
-		if (!Validate(p, panel))
+		if (!validate(p, panel))
 			return;
 
 	// Draws from bottom left to top right as first memory location indicates bottom left corner
@@ -65,51 +65,51 @@ void Renderer::UpdateRenderArea(Point2d p, int panel, uint32_t colour, bool vali
 	draw_area_.update = true;
 }
 
-void Renderer::UpdateRenderArea(Camera c, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Camera c, int panel, uint32_t colour, bool valid) {
 	if (!valid)
-		if (!Validate(c, panel))
+		if (!validate(c, panel))
 			return;
 
 	// Draw main line
 	Line main = Line(c.base, c.tip);
-	UpdateRenderArea(main, panel, colour, true);
+	updateRenderArea(main, panel, colour, true);
 
 	// Draw edges of arrow
 	Line left_edge = Line(c.tip, c.left);
 	Line right_edge = Line(c.tip, c.right);
-	UpdateRenderArea(left_edge, panel, colour, true);
-	UpdateRenderArea(right_edge, panel, colour, true);
+	updateRenderArea(left_edge, panel, colour, true);
+	updateRenderArea(right_edge, panel, colour, true);
 }
 
-void Renderer::UpdateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
 
 	switch (g->type) {
 	case Geometry::G_LINE:
 	{
-		UpdateRenderArea(static_cast<Line>(*g), 0);
+		updateRenderArea(static_cast<Line>(*g), 0);
 	} break;
 	case Geometry::G_TRI:
 	{
 		Line l0 = Line(*g->vertices.at(0), *g->vertices.at(1));
 		Line l1 = Line(*g->vertices.at(1), *g->vertices.at(2));
 		Line l2 = Line(*g->vertices.at(2), *g->vertices.at(0));
-		UpdateRenderArea(l0, panel, colour, valid);
-		UpdateRenderArea(l1, panel, colour, valid);
-		UpdateRenderArea(l2, panel, colour, valid);
+		updateRenderArea(l0, panel, colour, valid);
+		updateRenderArea(l1, panel, colour, valid);
+		updateRenderArea(l2, panel, colour, valid);
 		//UpdateRenderArea(static_cast<Tri>(g), 0);
 	} break;
 	case Geometry::G_RECT:
 	{
-		UpdateRenderArea(static_cast<Rect>(*g), 0);
+		updateRenderArea(static_cast<Rect>(*g), 0);
 	} break;
 	case Geometry::G_CIRCLE:
 	{
-		UpdateRenderArea(static_cast<Circle>(*g), 0);
+		updateRenderArea(static_cast<Circle>(*g), 0);
 	} break;
 	}
 }
 
-void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
 	
 	// null case
 	if (l.vertices.size() < 2)
@@ -119,7 +119,7 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 		return;
 	
 	if (!valid)
-		if (!Validate(l, panel))
+		if (!validate(l, panel))
 			// TODO: implement clip line instead of simple return
 			return;
 
@@ -131,7 +131,7 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 		int limit = abs((int)(l.vertices.at(0)->y - l.vertices.at(1)->y));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
-			UpdateRenderArea(p, panel, colour, true);
+			updateRenderArea(p, panel, colour, true);
 			p.y++;
 		}
 		return;
@@ -144,7 +144,7 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 		int limit = abs((int)(l.vertices.at(0)->x - l.vertices.at(1)->x));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
-			UpdateRenderArea(p, panel, colour, true);
+			updateRenderArea(p, panel, colour, true);
 			p.x++;
 		}
 		return;
@@ -152,14 +152,14 @@ void Renderer::UpdateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 	if (abs((int)(l.vertices.at(1)->y - l.vertices.at(0)->y)) < abs((int)(l.vertices.at(1)->x - l.vertices.at(0)->x)))
-		l.vertices.at(0)->x > l.vertices.at(1)->x ? RenderLineLow(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineLow(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
+		l.vertices.at(0)->x > l.vertices.at(1)->x ? renderLineLow(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : renderLineLow(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 	else
-		l.vertices.at(0)->y > l.vertices.at(1)->y ? RenderLineHigh(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : RenderLineHigh(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
+		l.vertices.at(0)->y > l.vertices.at(1)->y ? renderLineHigh(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : renderLineHigh(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
 
 	draw_area_.update = true;
 }
 
-void Renderer::RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
+void Renderer::renderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
@@ -172,7 +172,7 @@ void Renderer::RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour,
 	uint32_t y = p0.y;
 
 	for (uint32_t x = p0.x; x <= p1.x; x++) {
-		UpdateRenderArea(Point2d(x, y), panel, colour, true);
+		updateRenderArea(Point2d(x, y), panel, colour, true);
 		if (D > 0) {
 			y += yi;
 			D += (2 * (dy - dx));
@@ -181,7 +181,7 @@ void Renderer::RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour,
 	}
 }
 
-void Renderer::RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
+void Renderer::renderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
 	int xi = 1;
@@ -193,7 +193,7 @@ void Renderer::RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour
 	uint32_t x = p0.x;
 
 	for (uint32_t y = p0.y; y <= p1.y; y++) {
-		UpdateRenderArea(Point2d(x, y), panel, colour, true);
+		updateRenderArea(Point2d(x, y), panel, colour, true);
 		if (D > 0) {
 			x += xi;
 			D += (2 * (dx - dy));
@@ -202,14 +202,14 @@ void Renderer::RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour
 	}
 }
 
-void Renderer::UpdateRenderArea(Tri p_tri, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Tri p_tri, int panel, uint32_t colour, bool valid) {
 
 }
 
-void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Rect p_rect, int panel, uint32_t colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
 	if (!valid)
-		if (!Validate(p_rect, panel))
+		if (!validate(p_rect, panel))
 			// TODO: implement clip line instead of simple return
 			return;
 
@@ -219,7 +219,7 @@ void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	Point2d p = { rect.lt.x, rect.rb.y };
 	for (uint32_t i = rect.rb.y; i >= rect.lt.y; i--) {
 		for (uint32_t j = rect.lt.x; j <= rect.rb.x; j++) {
-			UpdateRenderArea(p, panel, colour, true);
+			updateRenderArea(p, panel, colour, true);
 			p.x++;
 		}
 		p.x = rect.lt.x;
@@ -229,23 +229,23 @@ void Renderer::UpdateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	draw_area_.update = true;
 }
 
-void Renderer::UpdateRenderArea(Circle p_circle, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(Circle p_circle, int panel, uint32_t colour, bool valid) {
 
 	if (!valid)
-		if (!Validate(p_circle, panel))
+		if (!validate(p_circle, panel))
 			return;
 
 	Circle c = p_circle;
 
-	UpdateRenderArea(p_circle.center, panel, colour, true);
+	updateRenderArea(p_circle.center, panel, colour, true);
 	for (int i = 0; i < 360; i += 30) {
 		double x = c.center.x + (c.r * cos(i * M_PI / 180));
 		double y = c.center.y + (c.r * sin(i * M_PI / 180));
-		UpdateRenderArea(Point2d((uint32_t)x, (uint32_t)y), panel, colour, true);
+		updateRenderArea(Point2d((uint32_t)x, (uint32_t)y), panel, colour, true);
 	}
 }
 
-void Renderer::DrawRenderArea(HDC hdc) {
+void Renderer::drawRenderArea(HDC hdc) {
 
 	if (!draw_area_.update)
 		return;
@@ -255,7 +255,7 @@ void Renderer::DrawRenderArea(HDC hdc) {
 	draw_area_.update = false;
 }
 
-void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
+void Renderer::clearRenderArea(bool force, int panel, uint32_t p_colour) {
 
 	if (!force) {
 		if (!draw_area_.update)
@@ -345,7 +345,7 @@ void Renderer::ClearRenderArea(bool force, int panel, uint32_t p_colour) {
 	draw_area_.update = true;
 }
 
-int Renderer::GetFocus() {
+int Renderer::getFocus() {
 
 	return draw_area_.focus;
 }
@@ -358,7 +358,7 @@ void Renderer::setFocus(int panel) {
 	draw_area_.update = true;
 }
 
-int Renderer::GetFocusLock() {
+int Renderer::getFocusLock() {
 
 	return draw_area_.lock_focus;
 }
@@ -373,7 +373,7 @@ void Renderer::setFocusLock(int panel) {
 	draw_area_.lock_focus = -1;
 }
 
-void Renderer::CleanUp() {
+void Renderer::cleanUp() {
 
 	if (!this)
 		return;
@@ -381,43 +381,43 @@ void Renderer::CleanUp() {
 		free(draw_area_.data);
 }
 
-void* Renderer::GetMemoryLocation(int panel, Point2d p) {
+void* Renderer::getMemoryLocation(int panel, Point2d p) {
 
 	uint32_t* cursorMemoryLocation = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 	return cursorMemoryLocation;
 }
 
-bool Renderer::Validate(Point2d p, int panel) {
+bool Renderer::validate(Point2d p, int panel) {
 
 	if (panel == -1)
 		return (p.x >= 0 && p.x <= draw_area_.width&& p.y >= 0 && p.y <= draw_area_.height);
 	return (p.x >= draw_area_.panels[panel].lt.x && p.x <= draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y <= draw_area_.panels[panel].rb.y);
 }
 
-bool Renderer::Validate(Camera c, int panel) {
+bool Renderer::validate(Camera c, int panel) {
 	
-	return (Validate(c.left, panel) && Validate(c.right, panel) && Validate(c.tip, panel) && Validate(c.base, panel));
+	return (validate(c.left, panel) && validate(c.right, panel) && validate(c.tip, panel) && validate(c.base, panel));
 }
 
-bool Renderer::Validate(Line l, int panel) {
+bool Renderer::validate(Line l, int panel) {
 
-	return (Validate(*l.vertices.at(0), panel) && Validate(*l.vertices.at(1), panel));
+	return (validate(*l.vertices.at(0), panel) && validate(*l.vertices.at(1), panel));
 }
 
-bool Renderer::Validate(Rect rect, int panel) {
+bool Renderer::validate(Rect rect, int panel) {
 
-	return (Validate(rect.lt, panel) && Validate(rect.rb, panel));
+	return (validate(rect.lt, panel) && validate(rect.rb, panel));
 }
 
-bool Renderer::Validate(Circle c, int panel) {
+bool Renderer::validate(Circle c, int panel) {
 
-	return (Validate(Point2d(c.center.x - c.r, c.center.y), panel) 
-		&& Validate(Point2d(c.center.x + c.r, c.center.y), panel) 
-		&& Validate(Point2d(c.center.x, c.center.y - c.r), panel) 
-		&& Validate(Point2d(c.center.x, c.center.y + c.r), panel));
+	return (validate(Point2d(c.center.x - c.r, c.center.y), panel) 
+		&& validate(Point2d(c.center.x + c.r, c.center.y), panel) 
+		&& validate(Point2d(c.center.x, c.center.y - c.r), panel) 
+		&& validate(Point2d(c.center.x, c.center.y + c.r), panel));
 }
 
-Line Renderer::ClipLine(Line l)
+Line Renderer::clipLine(Line l)
 {
 	return Line{ Point2d {}, Point2d {} };
 }

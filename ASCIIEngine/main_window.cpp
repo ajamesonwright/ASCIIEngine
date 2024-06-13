@@ -1,8 +1,8 @@
 #include "main_window.h"
 
 #include <string>
-#include "Renderer.h"
-#include "Debug.h"
+#include "renderer.h"
+#include "debug.h"
 
 // Window procedure
 LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_ LPARAM lParam) {
@@ -26,7 +26,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::getRenderer()) {
 			MW::renderer_->setDrawArea(&MW::getDrawRect(), MW::border_width_);
 		}
-		MW::getRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->clearRenderArea(true);
 	} break;
 	case WM_SIZE:
 	{
@@ -49,7 +49,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		if (MW::getRenderer() && !first_pass) {
 			MW::renderer_->setDrawArea(&temp_dr, MW::border_width_);
 		}
-		MW::getRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->clearRenderArea(true);
 	} break;
 	case WM_KEYDOWN:
 	{
@@ -63,7 +63,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		{
 			MW::input_->clearInput();
 			// clear focus lock or exit if no lock present
-			int locked = MW::getRenderer()->GetFocusLock();
+			int locked = MW::getRenderer()->getFocusLock();
 			if (locked != -1) {
 				Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::PANEL_LOCK);
 				dbg.setMsg(&MW::event_message);
@@ -72,7 +72,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 				Debug::Print(&dbg);
 
 				MW::getRenderer()->setFocusLock(-1);
-				MW::getRenderer()->UpdateRenderArea(MW::getRenderer()->GetDrawArea()->panels[locked], locked, MW::getRenderer()->colours[locked][MW::current_panel_ == locked ? 1 : 0], true);
+				MW::getRenderer()->updateRenderArea(MW::getRenderer()->getDrawArea()->panels[locked], locked, MW::getRenderer()->colours[locked][MW::current_panel_ == locked ? 1 : 0], true);
 				break;
 			}
 			MW::setRunningState(STOPPED);
@@ -87,22 +87,22 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		dbg.Print();
 
 		// Verify that the cursor has changed panels since last update and no panel is currently locked
-		if (MW::current_panel_ == MW::renderer_->GetFocus() || MW::renderer_->GetFocusLock() != -1)
+		if (MW::current_panel_ == MW::renderer_->getFocus() || MW::renderer_->getFocusLock() != -1)
 			break;
 		MW::renderer_->setFocus(MW::current_panel_);
 
 		// Reset TOP_DOWN panel
 		if (MW::current_panel_ != Renderer::TOP_DOWN) {
-			MW::renderer_->UpdateRenderArea(*MW::getDrawAreaPanel(Renderer::TOP_DOWN), Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
+			MW::renderer_->updateRenderArea(*MW::getDrawAreaPanel(Renderer::TOP_DOWN), Renderer::TOP_DOWN, MW::renderer_->colours[Renderer::TOP_DOWN][0], true);
 		}
 		// Reset FIRST_PERSON panel
 		if (MW::current_panel_ != Renderer::FIRST_PERSON) {
-			MW::renderer_->UpdateRenderArea(*MW::getDrawAreaPanel(Renderer::FIRST_PERSON), Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
+			MW::renderer_->updateRenderArea(*MW::getDrawAreaPanel(Renderer::FIRST_PERSON), Renderer::FIRST_PERSON, MW::renderer_->colours[Renderer::FIRST_PERSON][0], true);
 		}
 		if (MW::current_panel_ == Renderer::BACKGROUND)
 			break;
 
-		MW::renderer_->UpdateRenderArea(MW::renderer_->GetDrawArea()->panels[MW::current_panel_], MW::current_panel_, MW::renderer_->colours[MW::current_panel_][1], true);
+		MW::renderer_->updateRenderArea(MW::renderer_->getDrawArea()->panels[MW::current_panel_], MW::current_panel_, MW::renderer_->colours[MW::current_panel_][1], true);
 	} break;
 	case WM_LBUTTONDOWN:
 	{
@@ -113,7 +113,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.Print();
 		}
 
-		if (MW::getRenderer()->GetFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
+		if (MW::getRenderer()->getFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
 			MW::getRenderer()->setFocusLock(MW::current_panel_);
 			Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::PANEL_LOCK);
 			dbg.setMsg(&MW::event_message);
@@ -122,7 +122,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			break;
 		}
 
-		if (MW::getRenderer()->GetFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
+		if (MW::getRenderer()->getFocusLock() != -1 && MW::current_panel_ == Renderer::TOP_DOWN) {
 			MW::geo_start = MW::event_message.pt;
 			MW::input_->input_state[ML_DOWN].held = true;
 			MW::input_->input_state[ML_DOWN].update = true;
@@ -145,7 +145,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			break;
 
 		// Check for top-down focus lock before calculating square end point
-		if (MW::getRenderer()->GetFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
+		if (MW::getRenderer()->getFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
 			MW::geo_end = MW::event_message.pt;
 
 			if (MW::geo_start.displacementFrom(MW::geo_end) > 10) {
@@ -170,7 +170,7 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	} break;
 	case WM_RBUTTONUP:
 	{
-		if (MW::geometry_queue.size() > 0 && MW::getRenderer()->GetFocusLock() == Renderer::TOP_DOWN) {
+		if (MW::geometry_queue.size() > 0 && MW::getRenderer()->getFocusLock() == Renderer::TOP_DOWN) {
 			Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 			dbg.setMsg(&MW::event_message);
 			dbg.setPanelId(MW::current_panel_);
@@ -178,9 +178,9 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.setGeometry(MW::geometry_queue.back());
 			dbg.Print();
 			MW::geometry_queue.pop_back();
-			MW::getRenderer()->GetDrawArea()->update = true;
+			MW::getRenderer()->getDrawArea()->update = true;
 		}
-		MW::getRenderer()->ClearRenderArea();
+		MW::getRenderer()->clearRenderArea();
 	} break;
 	default:
 		return DefWindowProc(hwnd, msg, wParam, lParam);
@@ -189,7 +189,7 @@ return 0;
 }
 
 static void CleanUp() {
-	MW::getRenderer()->CleanUp();
+	MW::getRenderer()->cleanUp();
 	delete MW::getRenderer();
 	delete MW::input_;
 	for (int i = MW::geometry_queue.size() - 1; i >= 0; i--) {
@@ -254,7 +254,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	// set initial inputs
 	MW::input_ = new Input(&MW::camera);
 	// Clear DrawArea
-	MW::getRenderer()->ClearRenderArea(true);
+	MW::getRenderer()->clearRenderArea(true);
 	// set initial viewport location and orientation
 	{
 		Rect* td_panel = MW::getDrawAreaPanel(Renderer::TOP_DOWN);
@@ -306,7 +306,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	while (MW::getRunningState()) {
 		// Reset inputs
 		MW::input_->clearInput(0, 1);
-		MW::getRenderer()->ClearRenderArea();
+		MW::getRenderer()->clearRenderArea();
 		// Main message loop
 		while (PeekMessage(&MW::event_message, hwnd, 0, 0, PM_REMOVE)) {
 			// Update panel under mouseover for highlight
@@ -324,23 +324,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::input_->handleInput(&MW::event_message, dt);
 		MW::simulateFrame(dt);
 
-		MW::getRenderer()->ClearRenderArea(true);
+		MW::getRenderer()->clearRenderArea(true);
 		// Draw highlight line for click and hold
-		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->GetFocusLock() == 0) {
-			MW::getRenderer()->UpdateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
+		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0) {
+			MW::getRenderer()->updateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
 		// Draw geometry queue from oldest to newest
-		MW::renderer_->UpdateRenderArea(MW::camera, Renderer::TOP_DOWN);
+		MW::renderer_->updateRenderArea(MW::camera, Renderer::TOP_DOWN);
 		for (int i = 0; i < MW::geometry_queue.size(); i++) {
-			MW::renderer_->UpdateRenderArea(MW::geometry_queue[i], Renderer::TOP_DOWN);
+			MW::renderer_->updateRenderArea(MW::geometry_queue[i], Renderer::TOP_DOWN);
 		}
 		// Draw quadtree grid
 		std::vector<Line*>* grid = MW::qt->getQuadtreeGrid();
 		for (int i = 0; i < grid->size(); i++) {
-			MW::getRenderer()->UpdateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, false);
+			MW::getRenderer()->updateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, false);
 		}
 		// Draw updated RenderArea to screen
-		MW::getRenderer()->DrawRenderArea(hdc);
+		MW::getRenderer()->drawRenderArea(hdc);
 
 		QueryPerformanceCounter(&frame_end_time);
 		dt = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / frame_update_frequency;
@@ -360,7 +360,7 @@ Renderer* MainWindow::getRenderer() {
 }
 
 Rect* MainWindow::getDrawAreaPanel(int panel) {
-	return &MW::renderer_->GetDrawArea()->panels[panel];
+	return &MW::renderer_->getDrawArea()->panels[panel];
 }
 
 bool MainWindow::getRunningState() {
@@ -393,7 +393,7 @@ void MainWindow::setDrawMode(int p_draw_mode) {
 int MainWindow::getCursorFocus(Point2d p) {
 
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-		if (MW::getRenderer()->GetDrawArea()->panels[i].collidesWith(p)) {
+		if (MW::getRenderer()->getDrawArea()->panels[i].collidesWith(p)) {
 			return i;
 		}
 	}
@@ -401,6 +401,9 @@ int MainWindow::getCursorFocus(Point2d p) {
 }
 
 void MainWindow::addGeometry(Geometry* g) {
+
+	//Debug::DebugMessage quadrantDims(MAIN_WINDOW_CLASS, QUADTREE_TOSTRING);
+	//quadrantDims.setOutputString()
 
 	MW::geometry_queue.push_back(g);
 	MW::qt->addGeometry(g);
@@ -448,7 +451,7 @@ void MainWindow::simulateFrame(float dt) {
 // Find the appropriate memory address that reflects the lower left point of the geometry object
 void* MainWindow::findMemoryHandle(Geometry* g) {
 
-	return MW::getRenderer()->GetMemoryLocation(0, *g->vertices.at(0));
+	return MW::getRenderer()->getMemoryLocation(0, *g->vertices.at(0));
 }
 
 void MainWindow::setWindowHeight(uint16_t p_height) {

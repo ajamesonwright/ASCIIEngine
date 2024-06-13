@@ -1,4 +1,4 @@
-#include "Quadtree.h"
+#include "quadtree.h"
 #include <iostream>
 
 Quadtree::Quadtree(Rect r) {
@@ -29,40 +29,41 @@ void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>* lines) {
 		return;
 	}
 	// If p already exists, divide this quadrant into 4 subsections
-	uint32_t half_width_index;
-	uint32_t half_height_index;
+	uint32_t halfWidthIndex;
+	uint32_t halfHeightIndex;
 
-	half_width_index = getWidth() / 2;
-	half_height_index = getHeight() / 2;
+	halfWidthIndex = getWidth() / 2;
+	halfHeightIndex = getHeight() / 2;
 
+	// Adjust for odd number dimensions
 	if (getWidth() % 2 == 0)
-		half_width_index--;
+		halfWidthIndex--;
 	if (getHeight() % 2 == 0)
-		half_height_index--;
+		halfHeightIndex--;
 
 	// Store the crossed gridlines each time we identify a new quadrant to segment (since the lines are 1 pixel apart for each quad, we include
 	// all four lines required to draw the cross pattern)
 	// Vertical
-	Line* l0 = new Line(Point2d(x0 + half_width_index, y0), Point2d(x0 + half_width_index, y1));
-	lines->push_back(l0);
-	Line* l1 = new Line(Point2d(x0 + half_width_index + 1, y0), Point2d(x0 + half_width_index + 1, y1));
-	lines->push_back(l1);
+	Line* verticalLeftOfCenter = new Line(Point2d(left + halfWidthIndex, top), Point2d(left + halfWidthIndex, bottom));
+	lines->push_back(verticalLeftOfCenter);
+	Line* verticalRightOfCenter = new Line(Point2d(left + halfWidthIndex + 1, top), Point2d(left + halfWidthIndex + 1, bottom));
+	lines->push_back(verticalRightOfCenter);
 	// Horizontal
-	Line* l2 = new Line(Point2d(x0, y0 - half_height_index), Point2d(x1, y0 - half_height_index));
-	lines->push_back(l2);
-	Line* l3 = new Line(Point2d(x0, y0 - half_height_index + 1), Point2d(x1, y0 - half_height_index + 1));
-	lines->push_back(l3);
+	Line* horizontalTopOfCenter = new Line(Point2d(left, top - halfHeightIndex), Point2d(right, top - halfHeightIndex));
+	lines->push_back(horizontalTopOfCenter);
+	Line* horizontalBottomOfCenter = new Line(Point2d(left, top - halfHeightIndex + 1), Point2d(right, top - halfHeightIndex + 1));
+	lines->push_back(horizontalBottomOfCenter);
 
 
 	// Seqment current quad into 4 children
-	Quadrant* q0 = new Quadrant(x0, y0, x0 + half_width_index, y0 - half_height_index);
-	children.push_back(q0);
-	Quadrant* q1 = new Quadrant(x0, y0 - half_height_index - 1, x0 + half_width_index, y1);
-	children.push_back(q1);
-	Quadrant* q2 = new Quadrant(x0 + half_width_index + 1, y0 - half_height_index - 1, x1, y1);
-	children.push_back(q2);
-	Quadrant* q3 = new Quadrant(x0 + half_width_index + 1, y0, x1, y0 - half_height_index);
-	children.push_back(q3);
+	Quadrant* bottomLeft = new Quadrant(left, bottom, left + halfWidthIndex, bottom - halfHeightIndex);
+	children.push_back(bottomLeft);
+	Quadrant* topLeft = new Quadrant(left, bottom - halfHeightIndex - 1, left + halfWidthIndex, top);
+	children.push_back(topLeft);
+	Quadrant* topRight = new Quadrant(left + halfWidthIndex + 1, bottom - halfHeightIndex - 1, right, top);
+	children.push_back(topRight);
+	Quadrant* bottomRight = new Quadrant(left + halfWidthIndex + 1, bottom, right, bottom - halfHeightIndex);
+	children.push_back(bottomRight);
 
 	// Look for the appropriate quadrant to re-assign p
 	// Recursively assign p_p until it lands in a quadrant that is empty
@@ -102,10 +103,10 @@ std::vector<Quadtree::Quadrant*> Quadtree::Quadrant::getChildren() {
 
 Quadtree::Quadrant* Quadtree::Quadrant::findChildQuadrant(Point2d* p_p) {
 	bool right = false, top = false;
-	if (p_p->x >= children.at(3)->x0) {
+	if (p_p->x >= children.at(3)->left) {
 		right = true;
 	}
-	if (p_p->y <= children.at(2)->y0) {
+	if (p_p->y >= children.at(2)->top) {
 		top = true;
 	}
 	// Left quadrants -> right and top
