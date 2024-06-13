@@ -21,7 +21,7 @@
 	0 - input detected
 	0 - mouse position
 */
-int print = 0b0100'0000'1000;
+int print = 0b0100'0000'1001;
 // storage for print flag to allow toggling
 int stored_print_flag = 0b0000'0000'0000;
 

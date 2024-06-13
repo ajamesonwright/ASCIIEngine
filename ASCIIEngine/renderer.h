@@ -20,7 +20,6 @@ public:
 	};
 
 	struct DrawArea {
-		// Indexed from left-bottom
 		uint32_t xPos, yPos;
 		uint32_t width, height;
 		Rect panels[NUM_PANELS];
@@ -67,6 +66,7 @@ public:
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
 	DrawArea* getDrawArea();
+	Rect getDrawArea(int panelId);
 	void setDrawArea(Rect* rect, uint8_t border_width);
 	void updateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
 	void updateRenderArea(Camera c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);

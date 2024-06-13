@@ -8,13 +8,12 @@
 class Quadtree {
 
 public:
-	Quadtree(Rect r);
+	Quadtree(const Rect& r);
 	~Quadtree();
 
 private:
 	std::vector<Line*> gridLines;
 	struct Quadrant {
-		// X and Y positions referenced from bottom left to top right (matches draw_area_ indexing)
 		uint32_t left;
 		uint32_t right;
 		uint32_t top;
@@ -32,7 +31,7 @@ private:
 		Quadrant(uint32_t left, uint32_t bottom, uint32_t right, uint32_t top) { this->left = left; this->right = right; this->top = top; this->bottom = bottom; };
 		~Quadrant();
 		
-		void assignPoint(Point2d* p_p, std::vector<Line*>* lines);
+		void assignPoint(Point2d* p_p, std::vector<Line*>& lines);
 		void unassignPoint(Point2d* p_p, std::vector<Line*>* lines);
 		uint32_t getWidth() { return right - left; };
 		uint32_t getHeight() { return bottom - top; };

@@ -262,7 +262,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::camera.setSize(20);
 	}
 
-	MW::qt = new Quadtree(MW::getDrawRect());
+	//MW::qt = new Quadtree(MW::getDrawRect());
+	MW::qt = new Quadtree(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
+
 	//Point2d* p1 = new Point2d(100, 300);
 	//MW::qt->AssignPoint(p1);
 	////delete p1;
@@ -401,9 +403,6 @@ int MainWindow::getCursorFocus(Point2d p) {
 }
 
 void MainWindow::addGeometry(Geometry* g) {
-
-	//Debug::DebugMessage quadrantDims(MAIN_WINDOW_CLASS, QUADTREE_TOSTRING);
-	//quadrantDims.setOutputString()
 
 	MW::geometry_queue.push_back(g);
 	MW::qt->addGeometry(g);

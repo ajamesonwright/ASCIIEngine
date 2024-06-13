@@ -1,7 +1,7 @@
 #include "quadtree.h"
 #include <iostream>
 
-Quadtree::Quadtree(Rect r) {
+Quadtree::Quadtree(const Rect& r) {
 	root = new Quadrant(r.lb.x, r.lb.y, r.rt.x, r.rt.y);
 }
 
@@ -21,7 +21,7 @@ Point2d* Quadtree::getPoint(Quadrant* q) {
 	return q->getPoint();
 }
 
-void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>* lines) {
+void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>& lines) {
 	
 	// Assign point to empty quadrant
 	if (!p) {
@@ -45,14 +45,14 @@ void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>* lines) {
 	// all four lines required to draw the cross pattern)
 	// Vertical
 	Line* verticalLeftOfCenter = new Line(Point2d(left + halfWidthIndex, top), Point2d(left + halfWidthIndex, bottom));
-	lines->push_back(verticalLeftOfCenter);
+	lines.push_back(verticalLeftOfCenter);
 	Line* verticalRightOfCenter = new Line(Point2d(left + halfWidthIndex + 1, top), Point2d(left + halfWidthIndex + 1, bottom));
-	lines->push_back(verticalRightOfCenter);
+	lines.push_back(verticalRightOfCenter);
 	// Horizontal
-	Line* horizontalTopOfCenter = new Line(Point2d(left, top - halfHeightIndex), Point2d(right, top - halfHeightIndex));
-	lines->push_back(horizontalTopOfCenter);
-	Line* horizontalBottomOfCenter = new Line(Point2d(left, top - halfHeightIndex + 1), Point2d(right, top - halfHeightIndex + 1));
-	lines->push_back(horizontalBottomOfCenter);
+	Line* horizontalTopOfCenter = new Line(Point2d(left, bottom - halfHeightIndex - 1), Point2d(right, bottom - halfHeightIndex - 1));
+	lines.push_back(horizontalTopOfCenter);
+	Line* horizontalBottomOfCenter = new Line(Point2d(left, bottom - halfHeightIndex), Point2d(right, bottom - halfHeightIndex));
+	lines.push_back(horizontalBottomOfCenter);
 
 
 	// Seqment current quad into 4 children
@@ -106,7 +106,7 @@ Quadtree::Quadrant* Quadtree::Quadrant::findChildQuadrant(Point2d* p_p) {
 	if (p_p->x >= children.at(3)->left) {
 		right = true;
 	}
-	if (p_p->y >= children.at(2)->top) {
+	if (p_p->y <= children.at(2)->bottom) {
 		top = true;
 	}
 	// Left quadrants -> right and top
@@ -168,7 +168,7 @@ void Quadtree::assignPoint(Point2d* p) {
 		Quadrant* next = ptr->findChildQuadrant(p);
 		ptr = next;
 	}
- 	ptr->assignPoint(p, &gridLines);
+ 	ptr->assignPoint(p, gridLines);
 }
 
 void Quadtree::unassignPoint(Point2d* p) {

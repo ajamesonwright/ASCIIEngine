@@ -13,6 +13,10 @@ Renderer::DrawArea* Renderer::getDrawArea() {
 	return &draw_area_;
 }
 
+Rect Renderer::getDrawArea(int panelId) {
+	return draw_area_.panels[panelId];
+}
+
 void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 
 	/*
