@@ -56,7 +56,7 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
-void Renderer::updateRenderArea(Point2d p, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Point2d& p, int panel, uint32_t colour, bool valid) {
 
 	if (!valid)
 		if (!validate(p, panel))
@@ -69,20 +69,20 @@ void Renderer::updateRenderArea(Point2d p, int panel, uint32_t colour, bool vali
 	draw_area_.update = true;
 }
 
-void Renderer::updateRenderArea(Camera c, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Camera& c, int panel, uint32_t colour, bool valid) {
 	if (!valid)
 		if (!validate(c, panel))
 			return;
 
 	// Draw main line
-	Line main = Line(c.base, c.tip);
+	Line main(c.base, c.tip);
 	updateRenderArea(main, panel, colour, true);
 
 	// Draw edges of arrow
-	Line left_edge = Line(c.tip, c.left);
-	Line right_edge = Line(c.tip, c.right);
-	updateRenderArea(left_edge, panel, colour, true);
-	updateRenderArea(right_edge, panel, colour, true);
+	Line leftEdge(c.tip, c.left);
+	updateRenderArea(leftEdge, panel, colour, true);
+	Line rightEdge(c.tip, c.right);
+	updateRenderArea(rightEdge, panel, colour, true);
 }
 
 void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
@@ -113,7 +113,7 @@ void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool va
 	}
 }
 
-void Renderer::updateRenderArea(Line l, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool valid) {
 	
 	// null case
 	if (l.vertices.size() < 2)
@@ -163,7 +163,7 @@ void Renderer::updateRenderArea(Line l, int panel, uint32_t colour, bool valid) 
 	draw_area_.update = true;
 }
 
-void Renderer::renderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
+void Renderer::renderLineLow(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour, bool valid) {
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
@@ -185,7 +185,7 @@ void Renderer::renderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour,
 	}
 }
 
-void Renderer::renderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour, bool valid) {
+void Renderer::renderLineHigh(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour, bool valid) {
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
 	int xi = 1;
@@ -206,11 +206,11 @@ void Renderer::renderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour
 	}
 }
 
-void Renderer::updateRenderArea(Tri p_tri, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Tri& p_tri, int panel, uint32_t colour, bool valid) {
 
 }
 
-void Renderer::updateRenderArea(Rect p_rect, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Rect& p_rect, int panel, uint32_t colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
 	if (!valid)
 		if (!validate(p_rect, panel))
@@ -233,7 +233,7 @@ void Renderer::updateRenderArea(Rect p_rect, int panel, uint32_t colour, bool va
 	draw_area_.update = true;
 }
 
-void Renderer::updateRenderArea(Circle p_circle, int panel, uint32_t colour, bool valid) {
+void Renderer::updateRenderArea(const Circle& p_circle, int panel, uint32_t colour, bool valid) {
 
 	if (!valid)
 		if (!validate(p_circle, panel))
@@ -391,29 +391,29 @@ void* Renderer::getMemoryLocation(int panel, Point2d p) {
 	return cursorMemoryLocation;
 }
 
-bool Renderer::validate(Point2d p, int panel) {
+bool Renderer::validate(const Point2d& p, int panel) {
 
 	if (panel == -1)
 		return (p.x >= 0 && p.x <= draw_area_.width&& p.y >= 0 && p.y <= draw_area_.height);
 	return (p.x >= draw_area_.panels[panel].lt.x && p.x <= draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y <= draw_area_.panels[panel].rb.y);
 }
 
-bool Renderer::validate(Camera c, int panel) {
+bool Renderer::validate(const Camera& c, int panel) {
 	
 	return (validate(c.left, panel) && validate(c.right, panel) && validate(c.tip, panel) && validate(c.base, panel));
 }
 
-bool Renderer::validate(Line l, int panel) {
+bool Renderer::validate(const Line& l, int panel) {
 
 	return (validate(*l.vertices.at(0), panel) && validate(*l.vertices.at(1), panel));
 }
 
-bool Renderer::validate(Rect rect, int panel) {
+bool Renderer::validate(const Rect& rect, int panel) {
 
 	return (validate(rect.lt, panel) && validate(rect.rb, panel));
 }
 
-bool Renderer::validate(Circle c, int panel) {
+bool Renderer::validate(const Circle& c, int panel) {
 
 	return (validate(Point2d(c.center.x - c.r, c.center.y), panel) 
 		&& validate(Point2d(c.center.x + c.r, c.center.y), panel) 

@@ -158,11 +158,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 				dbg.Print();
 
 				MW::addGeometry(rect);
-				//Debug::DebugMessage dbg2(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::QUADTREE_TOSTRING);
-				//dbg2.setOutputString(MW::qt->ToString());
-				//dbg2.Print();
-				//MW::geometry_queue.push_back(rect);
-				//MW::qt->AddGeometry(rect);
 			}
 		}
 		MW::geo_start = Point2d();
@@ -170,14 +165,14 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	} break;
 	case WM_RBUTTONUP:
 	{
-		if (MW::geometry_queue.size() > 0 && MW::getRenderer()->getFocusLock() == Renderer::TOP_DOWN) {
+		if (MW::geometryQueue.size() > 0 && MW::getRenderer()->getFocusLock() == Renderer::TOP_DOWN) {
 			Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 			dbg.setMsg(&MW::event_message);
 			dbg.setPanelId(MW::current_panel_);
 			dbg.setDrawMode(0);
-			dbg.setGeometry(MW::geometry_queue.back());
+			dbg.setGeometry(MW::geometryQueue.back());
 			dbg.Print();
-			MW::geometry_queue.pop_back();
+			MW::geometryQueue.pop_back();
 			MW::getRenderer()->getDrawArea()->update = true;
 		}
 		MW::getRenderer()->clearRenderArea();
@@ -188,12 +183,12 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 return 0;
 }
 
-static void CleanUp() {
+static void cleanUp() {
 	MW::getRenderer()->cleanUp();
 	delete MW::getRenderer();
 	delete MW::input_;
-	for (int i = MW::geometry_queue.size() - 1; i >= 0; i--) {
-		delete MW::geometry_queue.at(i);
+	for (int i = MW::geometryQueue.size() - 1; i >= 0; i--) {
+		delete MW::geometryQueue.at(i);
 	}
 	delete MW::qt;
 }
@@ -251,47 +246,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::setMTCOffsetY(((MW::main_rect.getHeight()) - (MW::draw_rect.getHeight()) - 31) / 2);
 	}
 
-	// set initial inputs
-	MW::input_ = new Input(&MW::camera);
 	// Clear DrawArea
 	MW::getRenderer()->clearRenderArea(true);
 	// set initial viewport location and orientation
 	{
 		Rect* td_panel = MW::getDrawAreaPanel(Renderer::TOP_DOWN);
-		MW::camera = Camera(td_panel->lt.x + td_panel->getWidth() / 2, td_panel->lt.y + td_panel->getHeight() / 2, -90);
-		MW::camera.setSize(20);
+		MW::camera = new Camera(td_panel->lt.x + td_panel->getWidth() / 2, td_panel->lt.y + td_panel->getHeight() / 2, -90);
+		MW::camera->setSize(20);
+		if (!MW::camera) {
+			throw std::runtime_error("Failed to create camera!");
+		}
+	    
+	    // set initial inputs
+		MW::input_ = new Input(MW::camera);
 	}
 
-	//MW::qt = new Quadtree(MW::getDrawRect());
+	// Create base quadtree
 	MW::qt = new Quadtree(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
-
-	//Point2d* p1 = new Point2d(100, 300);
-	//MW::qt->AssignPoint(p1);
-	////delete p1;
-	//Debug::DebugMessage dbg1(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::QUADTREE_TOSTRING);
-	//dbg1.setOutputString(MW::qt->ToString());
-	//dbg1.Print();
-	////Debug::Print(&dbg1);
-
-	//Point2d* p2 = new Point2d(500, 400);
-	//MW::qt->AssignPoint(p2);
-	////delete p2;
-	//Debug::DebugMessage dbg2(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::QUADTREE_TOSTRING);
-	//dbg2.setOutputString(MW::qt->ToString());
-	//dbg2.Print();
-	////Debug::Print(&dbg2);
-
-	//Circle* c = new Circle(Point2d(100, 200), 30);
-	//MW::geometry_queue.push_back(c);
-	////delete c;
-	//Debug::DebugMessage dbg3(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::QUADTREE_TOSTRING);
-	//dbg3.setOutputString(MW::qt->ToString());
-	//dbg3.Print();
-	////Debug::Print(&dbg3);
-
-	//Rect* r = new Rect(Point2d(450, 100), Point2d(500, 300));
-	//MW::geometry_queue.push_back(r);
-	////delete r;
 
 	// Establish framerate metrics
 	float dt = 1.0f / 60.0f;
@@ -332,9 +303,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 			MW::getRenderer()->updateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
 		// Draw geometry queue from oldest to newest
-		MW::renderer_->updateRenderArea(MW::camera, Renderer::TOP_DOWN);
-		for (int i = 0; i < MW::geometry_queue.size(); i++) {
-			MW::renderer_->updateRenderArea(MW::geometry_queue[i], Renderer::TOP_DOWN);
+		MW::renderer_->updateRenderArea(*MW::camera, Renderer::TOP_DOWN);
+		for (int i = 0; i < MW::geometryQueue.size(); i++) {
+			MW::renderer_->updateRenderArea(MW::geometryQueue[i], Renderer::TOP_DOWN);
 		}
 		// Draw quadtree grid
 		std::vector<Line*>* grid = MW::qt->getQuadtreeGrid();
@@ -353,7 +324,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		frame_begin_time = frame_end_time;
 	}
 
-	CleanUp();
+	cleanUp();
 	return 0;
 }
 
@@ -404,47 +375,46 @@ int MainWindow::getCursorFocus(Point2d p) {
 
 void MainWindow::addGeometry(Geometry* g) {
 
-	MW::geometry_queue.push_back(g);
+	MW::geometryQueue.push_back(g);
 	MW::qt->addGeometry(g);
 }
 
 void MainWindow::removeGeometry(Geometry* g) {
 
-	MW::geometry_queue.pop_back();
+	MW::geometryQueue.pop_back();
 	MW::qt->removeGeometry(g);
 }
 
 void MainWindow::simulateFrame(float dt) {
 
 	// Damping effect on acceleration
-	MW::camera.ax = MW::camera.ax * 0.70f;
-	MW::camera.ay = MW::camera.ay * 0.70f;
-	MW::camera.clampAcceleration();
+	MW::camera->ax = MW::camera->ax * 0.70f;
+	MW::camera->ay = MW::camera->ay * 0.70f;
+	MW::camera->clampAcceleration();
 	// v = v + a*t
-	MW::camera.vx = (MW::camera.vx + MW::camera.ax * dt) * 0.90f;
-	MW::camera.vy = (MW::camera.vy + MW::camera.ay * dt) * 0.90f;
-	MW::camera.clampVelocity();
+	MW::camera->vx = (MW::camera->vx + MW::camera->ax * dt) * 0.90f;
+	MW::camera->vy = (MW::camera->vy + MW::camera->ay * dt) * 0.90f;
+	MW::camera->clampVelocity();
 
-	float delta_px = MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
-	float delta_py = MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
+	float delta_px = MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
+	float delta_py = MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
 
-	for (int i = 0; i < MW::geometry_queue.size(); i++) {
+	for (int i = 0; i < MW::geometryQueue.size(); i++) {
 		// find closest point on geometry and cast ray (draw line) for visual
 
 	}
 	// p = p + v*t + 1/2*a*t^2
-	MW::camera.px = MW::camera.px + MW::camera.vx * dt + MW::camera.ax * dt * dt * 0.5f;
-	MW::camera.py = MW::camera.py + MW::camera.vy * dt + MW::camera.ay * dt * dt * 0.5f;
-	MW::camera.x = (uint32_t)(MW::camera.px + 0.75); // 0.75 added to account for truncation due to cast
-	MW::camera.y = (uint32_t)(MW::camera.py + 0.75);
-	MW::camera.clampPosition(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
-	MW::camera.update();
+	MW::camera->px = MW::camera->px + MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
+	MW::camera->py = MW::camera->py + MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
+	MW::camera->x = (uint32_t)(MW::camera->px + 0.75); // 0.75 added to account for truncation due to cast
+	MW::camera->y = (uint32_t)(MW::camera->py + 0.75);
+	MW::camera->clampPosition(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
+	MW::camera->update();
 
 	Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, CAMERA_STATUS);
 	dbg.setMsg(&MW::event_message);
-	dbg.setCamera(&MW::camera);
+	dbg.setCamera(MW::camera);
 	dbg.Print();
-	//Debug::Print(&dbg);
 }
 
 // Find the appropriate memory address that reflects the lower left point of the geometry object

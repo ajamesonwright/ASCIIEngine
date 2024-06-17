@@ -68,15 +68,15 @@ public:
 	DrawArea* getDrawArea();
 	Rect getDrawArea(int panelId);
 	void setDrawArea(Rect* rect, uint8_t border_width);
-	void updateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
-	void updateRenderArea(Camera c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void updateRenderArea(const Point2d& p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
+	void updateRenderArea(const Camera& c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void updateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void updateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
-	void renderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void renderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void updateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
-	void updateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
-	void updateRenderArea(Circle c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
+	void updateRenderArea(const Line& l, int panel, uint32_t colour = 0x777777, bool valid = false);
+	void renderLineLow(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void renderLineHigh(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void updateRenderArea(const Tri& t, int panel, uint32_t colour = 0x555555, bool valid = false);
+	void updateRenderArea(const Rect& r, int panel, uint32_t colour = 0x333333, bool valid = false);
+	void updateRenderArea(const Circle& c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
 	void updateGeometry();
 	void drawRenderArea(HDC hdc);
 	void clearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
@@ -91,11 +91,11 @@ public:
 private:
 	DrawArea draw_area_;
 
-	bool validate(Point2d p, int panel = -1);
-	bool validate(Camera c, int panel = -1);
-	bool validate(Line l, int panel = -1);
-	bool validate(Rect rect, int panel = -1);
-	bool validate(Circle c, int panel = -1);
+	bool validate(const Point2d& p, int panel = -1);
+	bool validate(const Camera& c, int panel = -1);
+	bool validate(const Line& l, int panel = -1);
+	bool validate(const Rect& rect, int panel = -1);
+	bool validate(const Circle& c, int panel = -1);
 	Line clipLine(Line l);
 };
 

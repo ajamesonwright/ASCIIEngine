@@ -41,8 +41,8 @@ namespace MainWindow {
 
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
-	Camera camera;
-	std::vector<Geometry*> geometry_queue;
+	Camera* camera;
+	std::vector<Geometry*> geometryQueue;
 	Quadtree* qt;
 
 	MSG event_message;

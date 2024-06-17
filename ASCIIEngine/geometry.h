@@ -9,6 +9,12 @@
 #include <math.h>
 #include "debug.h"
 
+enum CompareType {
+	COMPARE_BY_X = 0b10,
+	COMPARE_BY_Y = 0b101,
+	UNDEFINED_COMPARE = 0b11111000
+};
+
 class Point2d {
 
 public:
@@ -19,17 +25,13 @@ public:
 	Point2d(const Point2d& source) { x = source.x; y = source.y; };
 	Point2d(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; };
 
-	//Point2d& operator = (Point2d const& obj) {
-	//	x = obj.x;
-	//	y = obj.y;
-	//	return *this;
-	//}
-
-	bool operator == (Point2d const& obj) {
+	bool operator == (Point2d const& obj) const {
 		return x == obj.x && y == obj.y;
 	}
 
 	int displacementFrom(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
+	void setX(uint32_t x) { this->x = x; };
+	void setY(uint32_t y) { this->y = y; };
 };
 
 class Point3d : public Point2d {
@@ -76,12 +78,12 @@ public:
 	virtual bool collidesWith(Point2d p) = 0;
 
 protected:
-	int comparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
+	int comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d*>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
 	std::vector<float> calculateSlopes(const std::vector<Point2d*> v_g);
 	void sortBySlope(std::vector<Point2d*> &vertices, const std::vector<float> slopes);
 private:
-	int comparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin = -1, const int end = -1);
-	int comparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2);
+	int comparePointVectorByCoordinate(CompareType compare_type, const std::vector<Point2d*>* v, const int begin = -1, const int end = -1);
+	int comparePointPairByCoordinate(CompareType compare_type, const Point2d* p1, const Point2d* p2);
 	bool compareBySlope(float f1, float f2);
 };
 
@@ -110,9 +112,10 @@ public:
 		if (a == b)
 			return;
 
-		int index_y = comparePointsByCoordinate(0b101, nullptr, &a, &b);
-		int index_x = comparePointsByCoordinate(0b10, nullptr, &a, &b);
+		int index_y = comparePointsByCoordinate(CompareType::COMPARE_BY_Y, nullptr, &a, &b);
+		int index_x = comparePointsByCoordinate(CompareType::COMPARE_BY_X, nullptr, &a, &b);
 		
+		Point2d first, second;
 		vertices.clear();
 		if (index_y != -1) {
 			if (index_y == 0) {
@@ -136,6 +139,7 @@ public:
 	};
 
 	bool collidesWith(Point2d p) { return false; }
+	void setVertex(Point2d src, Point2d dst) { src.setX(dst.x); src.setY(dst.y); }
 };
 
 class Tri : public Geometry {
@@ -165,11 +169,11 @@ public:
 
 		vertices.clear();
 		vertices.push_back(&a); vertices.push_back(&b); vertices.push_back(&c);
-		int index = comparePointsByCoordinate(0b101, &vertices);
+		int index = comparePointsByCoordinate(CompareType::COMPARE_BY_Y, &vertices);
 		if (index != 0)
 			std::swap(vertices.at(0), vertices.at(index));
 		// currently would not account for points with the same x-coord (TODO: implement binary int return type and masking for decode)
-		index = comparePointsByCoordinate(0b10, &vertices, nullptr, nullptr, 1);
+		index = comparePointsByCoordinate(CompareType::COMPARE_BY_X, &vertices, nullptr, nullptr, 1);
 		if (index != 1)
 			std::swap(*vertices.at(1), *vertices.at(index));
 	};
@@ -351,11 +355,13 @@ public:
 	float px, py, vx, vy, ax, ay;
 	uint16_t turn_speed = 150, move_speed = 1000;
 	Point2d left, right, tip, base;
+	Line* leftToTip;
+	Line* rightToTip;
+	Line* baseToTip;
 	uint8_t fov = 60;
 	uint8_t height = 1800;
 
 	Camera() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
-	Camera(const Camera& source);
 	Camera(uint32_t p_x, uint32_t p_y, float p_direction);
 
 	void update();

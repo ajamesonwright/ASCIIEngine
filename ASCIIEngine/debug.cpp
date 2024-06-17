@@ -75,7 +75,6 @@ namespace {
 	};
 }
 
-//void debug::PrintDebugMsg(int *debugMsg.GetCallingClass(), int *debugMsg.GetDebugType(), MSG* msg, int panel_id, int *debugMsg.GetLockedPanel(), Geometry* obj, int draw_mode, float fps, Input* input, Camera* camera) {
 void Debug::Print(Debug::DebugMessage* debugMsg) {
 
 	if (!print)

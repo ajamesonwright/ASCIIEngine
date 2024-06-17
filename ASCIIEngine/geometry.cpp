@@ -5,31 +5,31 @@
 * 0b10	- compare X coordinates, s.th. return 0 indicates p1.x is left of p2.x, and return 1 indicates the opposite.
 * 0b101 - compare Y coordinates, s.th. return 0 indicates p1.y is above (lower pixel value) than p2.y, and vice versa.
 */
-int Geometry::comparePointsByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
+int Geometry::comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d*>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
 
 	// Checking for invalid compare_type values
-	if (0b11110000 & compare_type || 0b1000 & compare_type || 0b0000 & compare_type) {
+	if (CompareType::UNDEFINED_COMPARE & compareType) {
 		throw "Invalid compare type!";
 		return -1;
 	}
-	if (0b10 & compare_type && 0b100 & compare_type) {
+	if (CompareType::COMPARE_BY_X & compareType && CompareType::COMPARE_BY_Y & compareType) {
 		throw "Invalid compare type!";
 		return -1;
 	}
 
 	if (v)
-		return comparePointVectorByCoordinate(compare_type, v, begin, end);
+		return comparePointVectorByCoordinate(compareType, v, begin, end);
 	if (p1 && p2)
-		return comparePointPairByCoordinate(compare_type, p1, p2);
+		return comparePointPairByCoordinate(compareType, p1, p2);
 	return -1;
 }
 
-int Geometry::comparePointVectorByCoordinate(const uint8_t compare_type, const std::vector<Point2d*>* v, const int begin, const int end) {
+int Geometry::comparePointVectorByCoordinate(CompareType compareType, const std::vector<Point2d*>* v, const int begin, const int end) {
 
 	size_t range_begin, range_end;
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
 
-	uint32_t compare_value = ((compare[0] & compare_type) == 1) ? 0 : UINT32_MAX;
+	uint32_t compare_value = ((compare[0] & compareType) == 1) ? 0 : UINT32_MAX;
 	size_t index = -1;
 	uint32_t current;
 
@@ -37,10 +37,9 @@ int Geometry::comparePointVectorByCoordinate(const uint8_t compare_type, const s
 	end == -1 ? range_end = v->size() : range_end = end;
 	// Return the index of the first instance of the highest/lowest value of the vector passed
 	for (size_t i = range_begin; i < range_end; i++) {
-		Point2d p = *v->at(i);
-		current = ((compare[1] & compare_type) >> 1) * p.x + ((compare[2] & compare_type) >> 2) * p.y;
+		current = ((compare[1] & compareType) >> 1) * v->at(i)->x + ((compare[2] & compareType) >> 2) * v->at(i)->y;
 		// Test the selected coordinate value against the compare value
-		if (((compare[0] & compare_type) && current > compare_value) || (!(compare[0] & compare_type) && current < compare_value)) {
+		if (((compare[0] & compareType) && current > compare_value) || (!(compare[0] & compareType) && current < compare_value)) {
 			compare_value = current;
 			index = i;
 		}
@@ -49,21 +48,21 @@ int Geometry::comparePointVectorByCoordinate(const uint8_t compare_type, const s
 	return (int)index;
 }
 
-int Geometry::comparePointPairByCoordinate(const uint8_t compare_type, const Point2d* p1, const Point2d* p2) {
+int Geometry::comparePointPairByCoordinate(CompareType compareType, const Point2d* p1, const Point2d* p2) {
 
 	// Compare ->                 X     Y
 	uint8_t compare[4] = { 0b1, 0b10, 0b100, 0b1000 };
 
 	uint32_t compare_value[2] = { 0 };
 	// Filter out the coordinate we don't want
-	compare_value[0] = ((compare[1] & compare_type) >> 1) * p1->x + ((compare[2] & compare_type) >> 2) * p1->y;
-	compare_value[1] = ((compare[1] & compare_type) >> 1) * p2->x + ((compare[2] & compare_type) >> 2) * p2->y;
+	compare_value[0] = ((compare[1] & compareType) >> 1) * p1->x + ((compare[2] & compareType) >> 2) * p1->y;
+	compare_value[1] = ((compare[1] & compareType) >> 1) * p2->x + ((compare[2] & compareType) >> 2) * p2->y;
 
 	int index = -1;
 	if (compare_value[0] == compare_value[1]) return index;
 
 	// implement a binary int return type and use a mask to decode? may eliminate ties for priority
-	if (compare[0] & compare_type) {
+	if (compare[0] & compareType) {
 		(compare_value[0] > compare_value[1]) ? index = 0 : index = 1;
 	} else {
 		(compare_value[0] < compare_value[1]) ? index = 0 : index = 1;
@@ -118,20 +117,6 @@ void Geometry::sortBySlope(std::vector<Point2d*>& vertices, const std::vector<fl
 	}
 }
 
-Camera::Camera(const Camera& source) {
-
-	x = source.x; y = source.y;
-	direction = source.direction;
-	size = source.size;
-	px = source.px; py = source.py;
-	vx = source.vx; vy = source.vy;
-	ax = 0.0f; ay = 0.0f;
-	base = Point2d(source.base);
-	tip = Point2d(source.tip);
-	left = Point2d(source.left);
-	right = Point2d(source.right);
-}
-
 Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
 
 	x = p_x; y = p_y;
@@ -141,6 +126,10 @@ Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
 	px = (float)p_x; py = (float)p_y;
 	vx = 0.0f; vy = 0.0f;
 	ax = 0.0f; ay = 0.0f;
+
+	leftToTip = new Line(this->left, this->tip);
+	rightToTip = new Line(this->right, this->tip);
+	baseToTip = new Line(this->base, this->tip);
 	update();
 }
 
@@ -154,6 +143,7 @@ void Camera::update() {
 
 	left = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5));
 	right = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
+
 }
 
 void Camera::clampDirection() {
