@@ -94,9 +94,9 @@ void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool va
 	} break;
 	case Geometry::G_TRI:
 	{
-		Line l0 = Line(*g->vertices.at(0), *g->vertices.at(1));
-		Line l1 = Line(*g->vertices.at(1), *g->vertices.at(2));
-		Line l2 = Line(*g->vertices.at(2), *g->vertices.at(0));
+		Line l0 = Line(g->vertices.at(0), g->vertices.at(1));
+		Line l1 = Line(g->vertices.at(1), g->vertices.at(2));
+		Line l2 = Line(g->vertices.at(2), g->vertices.at(0));
 		updateRenderArea(l0, panel, colour, valid);
 		updateRenderArea(l1, panel, colour, valid);
 		updateRenderArea(l2, panel, colour, valid);
@@ -128,11 +128,11 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 			return;
 
 	// Special case for vertical lines
-	if (l.vertices.at(0)->x == l.vertices.at(1)->x) {
+	if (l.vertices.at(0).x == l.vertices.at(1).x) {
 		Point2d p;
-		l.vertices.at(0)->y < l.vertices.at(1)->y ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
+		l.vertices.at(0).y < l.vertices.at(1).y ? p = l.vertices.at(0) : p = l.vertices.at(1);
 
-		int limit = abs((int)(l.vertices.at(0)->y - l.vertices.at(1)->y));
+		int limit = abs((int)(l.vertices.at(0).y - l.vertices.at(1).y));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
@@ -141,11 +141,11 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 		return;
 	}
 	// Special case for horizontal lines
-	if (l.vertices.at(0)->y == l.vertices.at(1)->y) {
+	if (l.vertices.at(0).y == l.vertices.at(1).y) {
 		Point2d p;
-		l.vertices.at(0)->x < l.vertices.at(1)->x ? p = *l.vertices.at(0) : p = *l.vertices.at(1);
+		l.vertices.at(0).x < l.vertices.at(1).x ? p = l.vertices.at(0) : p = l.vertices.at(1);
 
-		int limit = abs((int)(l.vertices.at(0)->x - l.vertices.at(1)->x));
+		int limit = abs((int)(l.vertices.at(0).x - l.vertices.at(1).x));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
@@ -155,10 +155,10 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 	}
 
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	if (abs((int)(l.vertices.at(1)->y - l.vertices.at(0)->y)) < abs((int)(l.vertices.at(1)->x - l.vertices.at(0)->x)))
-		l.vertices.at(0)->x > l.vertices.at(1)->x ? renderLineLow(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : renderLineLow(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
+	if (abs((int)(l.vertices.at(1).y - l.vertices.at(0).y)) < abs((int)(l.vertices.at(1).x - l.vertices.at(0).x)))
+		l.vertices.at(0).x > l.vertices.at(1).x ? renderLineLow(l.vertices.at(1), l.vertices.at(0), panel, colour, true) : renderLineLow(l.vertices.at(0), l.vertices.at(1), panel, colour, true);
 	else
-		l.vertices.at(0)->y > l.vertices.at(1)->y ? renderLineHigh(*l.vertices.at(1), *l.vertices.at(0), panel, colour, true) : renderLineHigh(*l.vertices.at(0), *l.vertices.at(1), panel, colour, true);
+		l.vertices.at(0).y > l.vertices.at(1).y ? renderLineHigh(l.vertices.at(1), l.vertices.at(0), panel, colour, true) : renderLineHigh(l.vertices.at(0), l.vertices.at(1), panel, colour, true);
 
 	draw_area_.update = true;
 }
@@ -405,7 +405,7 @@ bool Renderer::validate(const Camera& c, int panel) {
 
 bool Renderer::validate(const Line& l, int panel) {
 
-	return (validate(*l.vertices.at(0), panel) && validate(*l.vertices.at(1), panel));
+	return (validate(l.vertices.at(0), panel) && validate(l.vertices.at(1), panel));
 }
 
 bool Renderer::validate(const Rect& rect, int panel) {

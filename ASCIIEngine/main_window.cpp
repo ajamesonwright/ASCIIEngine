@@ -187,10 +187,11 @@ static void cleanUp() {
 	MW::getRenderer()->cleanUp();
 	delete MW::getRenderer();
 	delete MW::input_;
-	for (int i = MW::geometryQueue.size() - 1; i >= 0; i--) {
+	for (size_t i = 0; i < MW::geometryQueue.size(); i++) {
 		delete MW::geometryQueue.at(i);
 	}
 	delete MW::qt;
+	delete MW::camera;
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
@@ -420,7 +421,7 @@ void MainWindow::simulateFrame(float dt) {
 // Find the appropriate memory address that reflects the lower left point of the geometry object
 void* MainWindow::findMemoryHandle(Geometry* g) {
 
-	return MW::getRenderer()->getMemoryLocation(0, *g->vertices.at(0));
+	return MW::getRenderer()->getMemoryLocation(0, g->vertices.at(0));
 }
 
 void MainWindow::setWindowHeight(uint16_t p_height) {

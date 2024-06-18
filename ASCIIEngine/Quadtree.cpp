@@ -18,17 +18,18 @@ Quadtree::Quadrant::~Quadrant() {
 	for (Quadrant* c : children) {
 		delete c;
 	}
+	delete p;
 }
 
 Point2d* Quadtree::getPoint(Quadrant* q) {
 	return q->getPoint();
 }
 
-void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>& lines) {
+void Quadtree::Quadrant::assignPoint(const Point2d& p_p, std::vector<Line*>& lines) {
 	
 	// Assign point to empty quadrant
 	if (!p) {
-		p = p_p;
+		p = new Point2d(p_p);
 		return;
 	}
 	// If p already exists, divide this quadrant into 4 subsections
@@ -47,8 +48,7 @@ void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>& lines) {
 	// Store the crossed gridlines each time we identify a new quadrant to segment (since the lines are 1 pixel apart for each quad, we include
 	// all four lines required to draw the cross pattern)
 	// Vertical left of center
-	Line* verticalLeftOfCenter = new Line(Point2d(left + halfWidthIndex, top), Point2d(left + halfWidthIndex, bottom));
-	lines.push_back(verticalLeftOfCenter);
+	lines.push_back(new Line(Point2d(left + halfWidthIndex, top), Point2d(left + halfWidthIndex, bottom)));
 	// Right of center
 	lines.push_back(new Line(Point2d(left + halfWidthIndex + 1, top), Point2d(left + halfWidthIndex + 1, bottom)));
 	// Horizontal top of center
@@ -70,7 +70,7 @@ void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>& lines) {
 	// Recursively assign p_p until it lands in a quadrant that is empty
 	int index_p_p = -1;
 	for (int i = 0; i < 4; i++) {
-		if (p && children.at(i)->collidesWith(p)) {
+		if (p && children.at(i)->collidesWith(*p)) {
 			children.at(i)->p = p;
 			this->p = nullptr;
 		}
@@ -86,7 +86,7 @@ void Quadtree::Quadrant::assignPoint(Point2d* p_p, std::vector<Line*>& lines) {
 	msg.Print();
 }
 
-void Quadtree::Quadrant::unassignPoint(Point2d* p_p, std::vector<Line*>& lines) {
+void Quadtree::Quadrant::unassignPoint(const Point2d& p_p, std::vector<Line*>& lines) {
 
 	// logic for removal is a little more complicated than addition
 	// need to account for other points in our parent quad that may remain, thus preventing removal of grid lines
@@ -102,12 +102,12 @@ std::vector<Quadtree::Quadrant*> Quadtree::Quadrant::getChildren() {
 	return children;
 }
 
-Quadtree::Quadrant* Quadtree::Quadrant::findChildQuadrant(Point2d* p_p) {
+Quadtree::Quadrant* Quadtree::Quadrant::findChildQuadrant(const Point2d& p_p) {
 	bool right = false, top = false;
-	if (p_p->x >= children.at(3)->left) {
+	if (p_p.x >= children.at(3)->left) {
 		right = true;
 	}
-	if (p_p->y <= children.at(2)->bottom) {
+	if (p_p.y <= children.at(2)->bottom) {
 		top = true;
 	}
 	// Left quadrants -> right and top
@@ -123,7 +123,7 @@ void Quadtree::updateGridLines(std::vector<Geometry*> queue) {
 
 	gridLines.clear();
 	for (Geometry* g : queue) {
-		for (Point2d* p : g->vertices) {
+		for (Point2d p : g->vertices) {
 			assignPoint(p);
 		}
 	}
@@ -132,7 +132,7 @@ void Quadtree::updateGridLines(std::vector<Geometry*> queue) {
 void Quadtree::addGeometry(Geometry* g) {
 
 	int counter = 1;
-	for (Point2d* p : g->vertices) {
+	for (Point2d p : g->vertices) {
 		assignPoint(p);
 		std::cout << "Added point " << counter++ << std::endl;
 	}
@@ -140,12 +140,12 @@ void Quadtree::addGeometry(Geometry* g) {
 
 void Quadtree::removeGeometry(Geometry* g) {
 
-	for (Point2d* p : g->vertices) {
+	for (Point2d p : g->vertices) {
 		unassignPoint(p);
 	}
 }
 
-void Quadtree::assignPoint(Point2d* p) {
+void Quadtree::assignPoint(const Point2d& p) {
 	
 	Quadrant* ptr = root;
 	// While the current quadrant has children, step down until we find a viable, non-divided (and possibly empty) quadrant to place point
@@ -156,7 +156,7 @@ void Quadtree::assignPoint(Point2d* p) {
  	ptr->assignPoint(p, gridLines);
 }
 
-void Quadtree::unassignPoint(Point2d* p) {
+void Quadtree::unassignPoint(const Point2d& p) {
 
 	Quadrant* ptr = root;
 	while (ptr->isParent()) {

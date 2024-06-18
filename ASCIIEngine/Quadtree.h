@@ -30,16 +30,16 @@ private:
 		Quadrant(uint32_t left, uint32_t bottom, uint32_t right, uint32_t top) { this->left = left; this->right = right; this->top = top; this->bottom = bottom; };
 		~Quadrant();
 		
-		void assignPoint(Point2d* p_p, std::vector<Line*>& lines);
-		void unassignPoint(Point2d* p_p, std::vector<Line*>& lines);
+		void assignPoint(const Point2d& p_p, std::vector<Line*>& lines);
+		void unassignPoint(const Point2d& p_p, std::vector<Line*>& lines);
 		uint32_t getWidth() { return right - left; };
 		uint32_t getHeight() { return bottom - top; };
 
 		Point2d* getPoint();
 		std::vector<Quadrant*> getChildren();
-		bool collidesWith(Point2d* p) { return (p->x >= left && p->x <= right && p->y >= top && p->y <= bottom); }; // top and bottom refer to their respective locales on screen but the row count is reversed due to how the draw area is index
+		bool collidesWith(const Point2d& p) { return (p.x >= left && p.x <= right && p.y >= top && p.y <= bottom); }; // top and bottom refer to their respective locales on screen but the row count is reversed due to how the draw area is index
 		bool isParent() { return children.size() > 0; };
-		Quadrant* findChildQuadrant(Point2d* p_p);
+		Quadrant* findChildQuadrant(const Point2d& p_p);
 		std::string toString(int depth);
 	};
 
@@ -48,8 +48,8 @@ private:
 
 protected:
 	Point2d* getPoint(Quadrant* q);
-	void assignPoint(Point2d* p);
-	void unassignPoint(Point2d* p);
+	void assignPoint(const Point2d& p);
+	void unassignPoint(const Point2d& p);
 	
 public:
 	void updateGridLines(std::vector<Geometry*> queue);
