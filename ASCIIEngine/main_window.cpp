@@ -172,7 +172,8 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.setDrawMode(0);
 			dbg.setGeometry(MW::geometryQueue.back());
 			dbg.Print();
-			MW::geometryQueue.pop_back();
+
+			MW::removeGeometry(MW::geometryQueue.back());
 			MW::getRenderer()->getDrawArea()->update = true;
 		}
 		MW::getRenderer()->clearRenderArea();

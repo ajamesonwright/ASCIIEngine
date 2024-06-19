@@ -162,10 +162,6 @@ Line::Line(const Point2d& a, const Point2d& b) : Geometry(G_LINE) {
 	vertices.push_back(a);
 }
 
-Line::~Line() {
-
-}
-
 Tri::Tri(const Tri& source) : Geometry(G_TRI) {
 	type = source.type;
 	vertices.clear();

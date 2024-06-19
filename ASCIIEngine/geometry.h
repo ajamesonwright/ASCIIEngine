@@ -29,6 +29,10 @@ public:
 		return x == obj.x && y == obj.y;
 	}
 
+	bool operator != (Point2d const& obj) const {
+		return x != obj.x || y != obj.y;
+	}
+
 	int displacementFrom(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
 	void setX(uint32_t x) { this->x = x; };
 	void setY(uint32_t y) { this->y = y; };
@@ -114,7 +118,6 @@ public:
 	Line(const Line& source);
 	Line(const Geometry& source);
 	Line(const Point2d& a, const Point2d& b);
-	~Line();
 
 	bool collidesWith(Point2d p) { return false; }
 };
