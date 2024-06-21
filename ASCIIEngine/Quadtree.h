@@ -21,8 +21,11 @@ private:
 		Quadrant(uint32_t left, uint32_t bottom, uint32_t right, uint32_t top, Quadrant* parent);
 		~Quadrant();
 
+		static void reassignPoint(Quadrant* src, Quadrant* dst);
+
 		void assignPoint(const Point2d& p_p, std::vector<Line*>& lines);
 		//bool unassignPoint(const Point2d& p_p);
+		//void reassignPoint(Quadrant* dst);
 		bool linesEligibleForRemoval();
 		void unsegmentQuadrant(Quadrant* parent);
 
@@ -31,7 +34,7 @@ private:
 		bool collidesWith(const Point2d& p) { return (p.x >= left && p.x <= right && p.y >= top && p.y <= bottom); }; // top and bottom refer to their respective locales on screen but the row count is reversed due to how the draw area is index
 		bool isParent() { return children.size() > 0; };
 		std::string toString(int depth);
-		void reset();
+		void resetChildren();
 
 		bool operator==(Quadrant& const obj) const {
 			return left == obj.left && right == obj.right && top == obj.top && bottom == obj.bottom;
@@ -40,7 +43,6 @@ private:
 	private:
 		uint16_t sumValidPointsRemaining();
 		void segmentQuadrant(std::vector<Line*>& lines);
-		void reassignPoint(Quadrant* src, Quadrant* dst);
 		uint32_t getHeight() { return bottom - top; };
 		uint32_t getWidth() { return right - left; };
 	};

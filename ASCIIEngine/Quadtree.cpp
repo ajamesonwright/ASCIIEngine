@@ -19,7 +19,7 @@ Quadtree::Quadrant::Quadrant(uint32_t left, uint32_t bottom, uint32_t right, uin
 	this->top = top;
 	this->bottom = bottom;
 	this->parent = parent;
-	reset();
+	resetChildren();
 };
 
 Quadtree::Quadrant::~Quadrant() {
@@ -45,7 +45,9 @@ void Quadtree::Quadrant::assignPoint(const Point2d& p_p, std::vector<Line*>& lin
 	int index_p_p = -1;
 	for (int i = 0; i < 4; i++) {
 		if (p && children.at(i)->collidesWith(*p)) {
-			reassignPoint(this, children.at(i));
+			//Quadrant::reassignPoint(this, children.at(i));
+			children.at(i)->p = p;
+			this->p = nullptr;
 		}
 		if (children.at(i)->collidesWith(p_p))
 			index_p_p = i;
@@ -143,13 +145,18 @@ void Quadtree::Quadrant::unsegmentQuadrant(Quadrant* parent) {
 	for (Quadrant* q : this->parent->children) {
 		delete q;
 	}
-	parent->reset();
+	parent->resetChildren();
 }
 
 void Quadtree::Quadrant::reassignPoint(Quadrant* src, Quadrant* dst) {
-	dst->p = p;
+	dst->p = src->p;
 	src->p = nullptr;
 }
+
+//void Quadtree::Quadrant::reassignPoint(Quadrant* dst) {
+//	dst->p = p;
+//	this->p = nullptr;
+//}
 
 Quadtree::Quadrant* Quadtree::Quadrant::findChildQuadrant(const Point2d& p_p) {
 	bool right = false, top = false;
@@ -175,20 +182,25 @@ void Quadtree::addGeometry(Geometry* g) {
 void Quadtree::removeGeometry(Geometry* g) {
 	Quadrant* parentOfRemoved = nullptr;
 	for (Point2d p : g->vertices) {
-		parentOfRemoved = unassignPoint(p);
+		parentOfRemoved = unassignPoint(p); // this needs to account for greatest depth first
 	}
 
 	// Now that all vertices are removed, can we remove this quadrant, its siblings, and the gridlines?
 	if (parentOfRemoved) {
 		while (parentOfRemoved->linesEligibleForRemoval()) {
-			for (Line* l : parentOfRemoved/*->parent*/->quadrantLines) {
+			for (Line* l : parentOfRemoved->quadrantLines) {
 				delete l;
 				gridLines.pop_back();
 			}
-			for (Quadrant* q : parentOfRemoved/*->parent*/->children) {
+			for (Quadrant* q : parentOfRemoved->children) {
+				if (q->p) {
+					//Quadrant::reassignPoint(q, parentOfRemoved);
+					parentOfRemoved->p = q->p;
+					q->p = nullptr;
+				}
 				delete q;
 			}
-			parentOfRemoved->reset();
+			parentOfRemoved->resetChildren();
 			if (parentOfRemoved->parent == nullptr) {
 				break;
 			}
@@ -223,7 +235,7 @@ Quadtree::Quadrant* Quadtree::unassignPoint(const Point2d& p) {
 	return nullptr;
 }
 
-void Quadtree::Quadrant::reset() {
+void Quadtree::Quadrant::resetChildren() {
 	children = std::vector<Quadrant*>(0);
 	quadrantLines = std::vector<Line*>(0);
 }
