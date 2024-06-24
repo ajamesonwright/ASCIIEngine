@@ -36,7 +36,6 @@ private:
 		bool isParent() { return children.size() > 0; };
 		std::string toString(int depth);
 		void resetChildren();
-		bool deeper(const Quadrant& obj) { return depth > obj.depth; };
 
 		bool operator==(Quadrant& const obj) const {
 			return left == obj.left && right == obj.right && top == obj.top && bottom == obj.bottom;
