@@ -2,8 +2,9 @@
 
 /*
 * Take in a binary mask compare type and perform the associated comparison of geometry coordinates.
-* 0b10	- compare X coordinates, s.th. return 0 indicates p1.x is left of p2.x, and return 1 indicates the opposite.
-* 0b101 - compare Y coordinates, s.th. return 0 indicates p1.y is above (lower pixel value) than p2.y, and vice versa.
+* Returns -1 indicating that the coordinate specified in the compare type for the first point is the same as that of the second
+* Returns 0 indicating that the coordinate specified in the compare type for the first point is less than that of the second.
+* Returns 1 indicating the opposite.
 */
 int Geometry::comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d>* v, const Point2d* p1, const Point2d* p2, const int begin, const int end) {
 
@@ -71,6 +72,18 @@ int Geometry::comparePointPairByCoordinate(CompareType compareType, const Point2
 	return index;
 }
 
+uint8_t Geometry::comparePointPairByCoordinates(const Point2d* p1, const Point2d* p2) {
+	// Compare by x-value, then by y-value
+
+	// Return an 8-bit integer containing comparisons of the coordinates of each point
+	uint8_t result = 0b0;
+
+	result |= (COMPARE_BY_X & (int)(p1->x < p2->x)) << 0;
+	result |= (COMPARE_BY_Y & (int)(p1->y < p2->y)) << 1;
+
+	return result;
+}
+
 bool Geometry::compareBySlope(const float f1, float f2) {
 
 	// return indicates if floats are in their correct positions in vector
@@ -122,6 +135,7 @@ Line::Line(const Line& source) {
 	vertices.clear();
 	vertices.push_back(source.vertices[0]);
 	vertices.push_back(source.vertices[1]);
+	initialized = true;
 }
 
 Line::Line(const Geometry& source) {
@@ -131,35 +145,20 @@ Line::Line(const Geometry& source) {
 	vertices.clear();
 	vertices.push_back(source.vertices[0]);
 	vertices.push_back(source.vertices[1]);
+	initialized = true;
 };
 
 Line::Line(const Point2d& a, const Point2d& b) : Geometry(G_LINE) {
 	if (a == b)
 		return;
 
-	int index_y = comparePointsByCoordinate(CompareType::COMPARE_BY_Y, nullptr, &a, &b);
-	int index_x = comparePointsByCoordinate(CompareType::COMPARE_BY_X, nullptr, &a, &b);
-
 	vertices.clear();
-	if (index_y != -1) {
-		if (index_y == 0) {
-			vertices.push_back(a);
-			vertices.push_back(b);
-		} else {
-			vertices.push_back(b);
-			vertices.push_back(a);
-		}
-		return;
-	}
-
-	// index_x cannot be -1 otherwise the return statement at the top has already executed
-	if (index_x == 0) {
-		vertices.push_back(a);
-		vertices.push_back(b);
-		return;
-	}
-	vertices.push_back(b);
 	vertices.push_back(a);
+	vertices.push_back(b);
+	initialized = true;
+	return;
+
+	
 }
 
 Tri::Tri(const Tri& source) : Geometry(G_TRI) {

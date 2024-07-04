@@ -56,11 +56,42 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 	draw_area_.panels[BACKGROUND] = Rect(rect);
 }
 
-void Renderer::updateRenderArea(const Point2d& p, int panel, uint32_t colour, bool valid) {
+void Renderer::clampDimension(uint32_t& dim, Dimension d, int panel) {
+	uint32_t lower = d == HORIZONTAL ? draw_area_.panels[panel].lt.x : draw_area_.panels[panel].lt.x;
+	uint32_t upper = d == HORIZONTAL ? draw_area_.panels[panel].rb.x : draw_area_.panels[panel].rb.y;
+	clampDimension(dim, lower, upper);
+}
 
-	if (!valid)
-		if (!validate(p, panel))
+uint16_t Renderer::validate(Geometry* g, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
+	switch (g->type) {
+	case Geometry::G_LINE:
+	{
+		result = validate(static_cast<Line>(*g), bounds, panel);
+	} break;
+	/*case Geometry::G_TRI:
+	{
+		return validate(static_cast<Tri>(g), bounds, panel);
+	} break;*/
+	case Geometry::G_RECT:
+	{
+		result = validate(static_cast<Rect>(*g), bounds, panel);
+	} break;
+	case Geometry::G_CIRCLE:
+	{
+		result = validate(static_cast<Circle>(*g), bounds, panel);
+	} break;
+	}
+	return result;
+}
+
+void Renderer::updateRenderArea(const Point2d& p, int panel, uint32_t colour, bool valid) {
+	uint32_t bounds[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX }; // minX, maxX, minY, maxY
+	if (!valid) {
+		uint16_t clipType = validate(p, bounds, panel);
+		if (clipType)
 			return;
+	}
 
 	// Draws from bottom left to top right as first memory location indicates bottom left corner
 	uint32_t* pixel = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
@@ -70,9 +101,13 @@ void Renderer::updateRenderArea(const Point2d& p, int panel, uint32_t colour, bo
 }
 
 void Renderer::updateRenderArea(const Camera& c, int panel, uint32_t colour, bool valid) {
-	if (!valid)
-		if (!validate(c, panel))
-			return;
+	Line clippedLine;
+	uint32_t bounds[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX }; // minX, maxX, minY, maxY
+	if (!valid) {
+		if (!validate(c, bounds, panel)) {
+
+		}
+	}
 
 	// Draw main line
 	Line main(c.base, c.tip);
@@ -86,7 +121,6 @@ void Renderer::updateRenderArea(const Camera& c, int panel, uint32_t colour, boo
 }
 
 void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool valid) {
-
 	switch (g->type) {
 	case Geometry::G_LINE:
 	{
@@ -114,7 +148,6 @@ void Renderer::updateRenderArea(Geometry* g, int panel, uint32_t colour, bool va
 }
 
 void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool valid) {
-	
 	// null case
 	if (l.vertices.size() < 2)
 		return;
@@ -122,17 +155,21 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 	if (l.vertices.at(0) == l.vertices.at(1))
 		return;
 	
-	if (!valid)
-		if (!validate(l, panel))
-			// TODO: implement clip line instead of simple return
-			return;
+	Line clippedLine = l;
+	uint32_t bounds[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX }; // minX, maxX, minY, maxY
+	if (!valid) {
+		uint16_t clipType = validate(l, bounds, panel);
+		if (clipType) {
+			clippedLine = clipLine(l, bounds, clipType, panel);
+		}
+	}
 
 	// Special case for vertical lines
-	if (l.vertices.at(0).x == l.vertices.at(1).x) {
+	if (clippedLine.vertices.at(0).x == clippedLine.vertices.at(1).x) {
 		Point2d p;
-		l.vertices.at(0).y < l.vertices.at(1).y ? p = l.vertices.at(0) : p = l.vertices.at(1);
+		clippedLine.vertices.at(0).y < clippedLine.vertices.at(1).y ? p = clippedLine.vertices.at(0) : p = clippedLine.vertices.at(1);
 
-		int limit = abs((int)(l.vertices.at(0).y - l.vertices.at(1).y));
+		int limit = abs((int)(clippedLine.vertices.at(0).y - clippedLine.vertices.at(1).y));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
@@ -141,11 +178,11 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 		return;
 	}
 	// Special case for horizontal lines
-	if (l.vertices.at(0).y == l.vertices.at(1).y) {
+	if (clippedLine.vertices.at(0).y == clippedLine.vertices.at(1).y) {
 		Point2d p;
-		l.vertices.at(0).x < l.vertices.at(1).x ? p = l.vertices.at(0) : p = l.vertices.at(1);
+		clippedLine.vertices.at(0).x < clippedLine.vertices.at(1).x ? p = clippedLine.vertices.at(0) : p = clippedLine.vertices.at(1);
 
-		int limit = abs((int)(l.vertices.at(0).x - l.vertices.at(1).x));
+		int limit = abs((int)(clippedLine.vertices.at(0).x - clippedLine.vertices.at(1).x));
 		for (int i = 0; i < limit; i++) {
 			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
@@ -155,15 +192,17 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 	}
 
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
-	if (abs((int)(l.vertices.at(1).y - l.vertices.at(0).y)) < abs((int)(l.vertices.at(1).x - l.vertices.at(0).x)))
-		l.vertices.at(0).x > l.vertices.at(1).x ? renderLineLow(l.vertices.at(1), l.vertices.at(0), panel, colour, true) : renderLineLow(l.vertices.at(0), l.vertices.at(1), panel, colour, true);
+	if (abs((int)(clippedLine.vertices.at(1).y - clippedLine.vertices.at(0).y)) < abs((int)(clippedLine.vertices.at(1).x - clippedLine.vertices.at(0).x)))
+		clippedLine.vertices.at(0).x > clippedLine.vertices.at(1).x ? renderLineLow(clippedLine.vertices.at(1), clippedLine.vertices.at(0), panel, colour, true) : renderLineLow(clippedLine.vertices.at(0), clippedLine.vertices.at(1), panel, colour, true);
 	else
-		l.vertices.at(0).y > l.vertices.at(1).y ? renderLineHigh(l.vertices.at(1), l.vertices.at(0), panel, colour, true) : renderLineHigh(l.vertices.at(0), l.vertices.at(1), panel, colour, true);
+		clippedLine.vertices.at(0).y > clippedLine.vertices.at(1).y ? renderLineHigh(clippedLine.vertices.at(1), clippedLine.vertices.at(0), panel, colour, true) : renderLineHigh(clippedLine.vertices.at(0), clippedLine.vertices.at(1), panel, colour, true);
 
 	draw_area_.update = true;
 }
 
+
 void Renderer::renderLineLow(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour, bool valid) {
+	// If dx > dy, increment over x value to determine y value
 	// https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
@@ -186,6 +225,7 @@ void Renderer::renderLineLow(const Point2d& p0, const Point2d& p1, int panel, ui
 }
 
 void Renderer::renderLineHigh(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour, bool valid) {
+	// If dx < dy, increment over y value to determine x value
 	int dx = p1.x - p0.x;
 	int dy = p1.y - p0.y;
 	int xi = 1;
@@ -212,21 +252,26 @@ void Renderer::updateRenderArea(const Tri& p_tri, int panel, uint32_t colour, bo
 
 void Renderer::updateRenderArea(const Rect& p_rect, int panel, uint32_t colour, bool valid) {
 	// Used for drawing UI elements, since they will typically be the only objects represented as rectangles
-	if (!valid)
-		if (!validate(p_rect, panel))
-			// TODO: implement clip line instead of simple return
-			return;
+	
+	Rect clippedRect = p_rect;
+	uint32_t bounds[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX }; // minX, maxX, minY, maxY
+	if (!valid) {
+		uint16_t clipType = validate(p_rect, bounds, panel);
+		if (clipType) {
+			clippedRect = clipRect(p_rect, bounds, clipType, panel);
+		}
+	}
 
 	// for now, assuming that no rasterization is required (all lines are horizontal or vertical)
-	Rect rect = p_rect;
+	//Rect rect = p_rect;
 	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
-	Point2d p = { rect.lt.x, rect.rb.y };
-	for (uint32_t i = rect.rb.y; i >= rect.lt.y; i--) {
-		for (uint32_t j = rect.lt.x; j <= rect.rb.x; j++) {
+	Point2d p = { clippedRect.lt.x, clippedRect.rb.y };
+	for (uint32_t i = clippedRect.rb.y; i >= clippedRect.lt.y; i--) {
+		for (uint32_t j = clippedRect.lt.x; j <= clippedRect.rb.x; j++) {
 			updateRenderArea(p, panel, colour, true);
 			p.x++;
 		}
-		p.x = rect.lt.x;
+		p.x = clippedRect.lt.x;
 		p.y--;
 	}
 
@@ -234,10 +279,13 @@ void Renderer::updateRenderArea(const Rect& p_rect, int panel, uint32_t colour, 
 }
 
 void Renderer::updateRenderArea(const Circle& p_circle, int panel, uint32_t colour, bool valid) {
+	uint32_t bounds[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX }; // minX, maxX, minY, maxY
+	if (!valid) {
+		uint16_t clipType = validate(p_circle, bounds, panel);
+		if (clipType) {
 
-	if (!valid)
-		if (!validate(p_circle, panel))
-			return;
+		}
+	}
 
 	Circle c = p_circle;
 
@@ -250,7 +298,6 @@ void Renderer::updateRenderArea(const Circle& p_circle, int panel, uint32_t colo
 }
 
 void Renderer::drawRenderArea(HDC hdc) {
-
 	if (!draw_area_.update)
 		return;
 
@@ -260,7 +307,6 @@ void Renderer::drawRenderArea(HDC hdc) {
 }
 
 void Renderer::clearRenderArea(bool force, int panel, uint32_t p_colour) {
-
 	if (!force) {
 		if (!draw_area_.update)
 			return;
@@ -350,12 +396,10 @@ void Renderer::clearRenderArea(bool force, int panel, uint32_t p_colour) {
 }
 
 int Renderer::getFocus() {
-
 	return draw_area_.focus;
 }
 
 void Renderer::setFocus(int panel) {
-
 	if (draw_area_.lock_focus != -1)
 		return;
 	draw_area_.focus = panel;
@@ -363,12 +407,10 @@ void Renderer::setFocus(int panel) {
 }
 
 int Renderer::getFocusLock() {
-
 	return draw_area_.lock_focus;
 }
 
 void Renderer::setFocusLock(int panel) {
-
 	draw_area_.update = true;
 	if (draw_area_.lock_focus == -1) {
 		draw_area_.lock_focus = panel;
@@ -378,7 +420,6 @@ void Renderer::setFocusLock(int panel) {
 }
 
 void Renderer::cleanUp() {
-
 	if (!this)
 		return;
 	if (draw_area_.data)
@@ -386,42 +427,179 @@ void Renderer::cleanUp() {
 }
 
 void* Renderer::getMemoryLocation(int panel, Point2d p) {
-
 	uint32_t* cursorMemoryLocation = (uint32_t*)draw_area_.data + (draw_area_.width * draw_area_.height) - (p.y * draw_area_.width) + p.x;
 	return cursorMemoryLocation;
 }
 
-bool Renderer::validate(const Point2d& p, int panel) {
+uint16_t Renderer::validate(const Point2d& p, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
+	if (bounds[0] == UINT32_MAX) { // check first element to see if array is unassigned
+		if (panel == -1) {
+			bounds[0] = 0;
+			bounds[1] = draw_area_.width;
+			bounds[2] = 0;
+			bounds[3] = draw_area_.height;
+		} else {
+			bounds[0] = draw_area_.panels[panel].lt.x;
+			bounds[1] = draw_area_.panels[panel].rb.x;
+			bounds[2] = draw_area_.panels[panel].lt.y;
+			bounds[3] = draw_area_.panels[panel].rb.y;
+		}
+	}
 
-	if (panel == -1)
-		return (p.x >= 0 && p.x <= draw_area_.width&& p.y >= 0 && p.y <= draw_area_.height);
-	return (p.x >= draw_area_.panels[panel].lt.x && p.x <= draw_area_.panels[panel].rb.x && p.y >= draw_area_.panels[panel].lt.y && p.y <= draw_area_.panels[panel].rb.y);
+	uint16_t screensWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+	uint16_t screensHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+	result |= (int)(p.x < bounds[0] || p.x >= screensWidth) * LEFT;
+	result |= (int)(p.x > bounds[1] && p.x <= screensWidth) * RIGHT;
+	result |= (int)(p.y < bounds[2] || p.y >= screensHeight) * TOP;
+	result |= (int)(p.y > bounds[3] && p.y <= screensHeight) * BOTTOM;
+
+	return result;
 }
 
-bool Renderer::validate(const Camera& c, int panel) {
+uint16_t Renderer::validate(const Line& l, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
+
+	result |= validate(l.vertices.at(0), bounds, panel) << 0;
+	result |= validate(l.vertices.at(1), bounds, panel) << 4;
+	return result;
+}
+
+uint16_t Renderer::validate(const Rect& rect, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
 	
-	return (validate(c.left, panel) && validate(c.right, panel) && validate(c.tip, panel) && validate(c.base, panel));
+	result |= validate(rect.lt, bounds, panel) << 0; // left and top
+	result |= validate(rect.rb, bounds, panel) << 4; // right and bottom
+	return result;
 }
 
-bool Renderer::validate(const Line& l, int panel) {
+uint16_t Renderer::validate(const Circle& c, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
 
-	return (validate(l.vertices.at(0), panel) && validate(l.vertices.at(1), panel));
+	result |= validate(Point2d(c.center.x - c.r, c.center.y), bounds, panel) << 0; // left
+	result |= validate(Point2d(c.center.x + c.r, c.center.y), bounds, panel) << 4; // right
+	result |= validate(Point2d(c.center.x, c.center.y - c.r), bounds, panel) << 8; // top
+	result |= validate(Point2d(c.center.x, c.center.y + c.r), bounds, panel) << 12; // bottom
+
+	return result;
 }
 
-bool Renderer::validate(const Rect& rect, int panel) {
+uint16_t Renderer::validate(const Camera& c, uint32_t bounds[], int panel) {
+	uint16_t result = 0b0;
 
-	return (validate(rect.lt, panel) && validate(rect.rb, panel));
+	result |= validate(c.left, bounds, panel) << 0;
+	result |= validate(c.right, bounds, panel) << 4;
+	result |= validate(c.tip, bounds, panel) << 8;
+	result |= validate(c.base, bounds, panel) << 12;
+
+	return result;
 }
 
-bool Renderer::validate(const Circle& c, int panel) {
+Line Renderer::clipLine(const Line& l, const uint32_t bounds[], const uint16_t& clipType, int panel) {
+	uint32_t vertexDimensions[4] = { l.vertices.at(0).x, l.vertices.at(0).y, l.vertices.at(1).x, l.vertices.at(1).y};
+	int index = 0;
+	int bitShift = 0;
+	for (Point2d v : l.vertices) {
+		uint32_t boundX = ((clipType >> bitShift & LEFT) >> 0) * bounds[0] + ((clipType >> bitShift & RIGHT) >> 1) * bounds[1];
+		uint32_t boundY = ((clipType >> bitShift & TOP) >> 2) * bounds[2] + ((clipType >> bitShift & BOTTOM) >> 3) * bounds[3];
+		if (boundX > 0) {
+			// Specify clipped Y value if the cursor is outside the left/right dims
+			uint32_t clippedY = calculateClippedY(l.vertices.at(0), l.vertices.at(1), boundX);
+			clampDimension(clippedY, bounds[2], bounds[3]);
+			vertexDimensions[(bitShift / 4) + index + 1] = clippedY;
 
-	return (validate(Point2d(c.center.x - c.r, c.center.y), panel) 
-		&& validate(Point2d(c.center.x + c.r, c.center.y), panel) 
-		&& validate(Point2d(c.center.x, c.center.y - c.r), panel) 
-		&& validate(Point2d(c.center.x, c.center.y + c.r), panel));
+			if (boundY == 0) {
+				vertexDimensions[(bitShift / 4) + index] = boundX;
+			} else {
+				// Specify clipped X value if cursor is also outside the top/bottom dims
+				uint32_t clippedX = calculateClippedX(l.vertices.at(0), l.vertices.at(1), boundY);
+				clampDimension(clippedX, bounds[0], bounds[1]);
+				vertexDimensions[(bitShift / 4) + index] = clippedX;
+			}
+		}
+		if (boundY > 0 && boundX == 0) {
+			vertexDimensions[(bitShift / 4) + index] = calculateClippedX(l.vertices.at(0), l.vertices.at(1), boundY);
+			vertexDimensions[(bitShift / 4) + index + 1] = boundY;
+		}
+		index++;
+		bitShift += 4;
+	}
+	return Line(Point2d(vertexDimensions[0], vertexDimensions[1]), Point2d(vertexDimensions[2], vertexDimensions[3]));
 }
 
-Line Renderer::clipLine(Line l)
-{
-	return Line{ Point2d {}, Point2d {} };
+//Rect Renderer::clipRect(const Rect& r, const uint32_t bounds[], const uint16_t& clipType, int panel) {
+Rect Renderer::clipRect(const Rect & r, const uint32_t bounds[], const uint16_t & clipType, int panel) {
+	uint32_t dimensions[4] = { r.lt.x, r.lt.y, r.rb.x, r.rb.y }; // left, top, right, bottom
+	int index = 0;
+	int bitShift = 0;
+	for (Point2d v : r.vertices) {
+		uint32_t boundX = ((clipType >> bitShift & LEFT) >> 0) * bounds[0] + ((clipType >> bitShift & RIGHT) >> 1) * bounds[1];
+		uint32_t boundY = ((clipType >> bitShift & TOP) >> 2) * bounds[2] + ((clipType >> bitShift & BOTTOM) >> 3) * bounds[3];
+		if (boundX > 0) {
+			uint32_t clippedY = calculateClippedY(r.lt, r.rb, boundX);
+			clampDimension(clippedY, bounds[2], bounds[3]);
+			dimensions[(bitShift / 4) + index + 1] = clippedY;
+
+			if (boundY == 0) {
+				dimensions[(bitShift / 4) + index] = boundX;
+			} else {
+				// Specify clipped X value if cursor is also outside the top/bottom dims
+				uint32_t clippedX = calculateClippedX(r.lt, r.rb, boundY);
+				clampDimension(clippedX, bounds[0], bounds[1]);
+				dimensions[(bitShift / 4) + index] = clippedX;
+			}
+		}
+		if (boundY > 0 && boundX == 0) {
+			dimensions[(bitShift / 4) + index] = calculateClippedX(r.lt, r.rb, boundY);
+			dimensions[(bitShift / 4) + index + 1] = boundY;
+		}
+		index++;
+		bitShift += 4;
+	}
+	return Rect(Point2d(dimensions[0], dimensions[1]), Point2d(dimensions[2], dimensions[3]));
 }
+
+uint32_t Renderer::calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX) {
+	int32_t dx = (p2.x - p1.x);
+	int32_t dy = (p2.y - p1.y);
+
+	double m = static_cast<double>(dy) / dx;
+	double b = p1.y - m * p1.x;
+	double D = m * boundX + b;
+	int32_t Y;
+	if (D - (int)D > 0.5) {
+		Y = static_cast<int32_t>(D + 1);
+	} else {
+		Y = static_cast<int32_t>(D);
+	}
+
+	return Y;
+}
+
+uint32_t Renderer::calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY) {
+	int32_t dx = (p2.x - p1.x);
+	int32_t dy = (p2.y - p1.y);
+
+	double m = static_cast<double>(dy) / dx;
+	double b = p1.y - m * p1.x;
+	double D = (boundY - b) / m;
+
+	int32_t X;
+	if (D - (int)D > 0.5) {
+		X = static_cast<int32_t>(D + 1);
+	} else {
+		X = static_cast<int32_t>(D);
+	}
+
+	return X;
+}
+
+void Renderer::clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper) {
+	if (dim < lower) {
+		dim = lower;
+	} else if (dim > upper) {
+		dim = upper;
+	}
+}
+

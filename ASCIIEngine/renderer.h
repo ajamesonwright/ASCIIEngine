@@ -19,6 +19,18 @@ public:
 		NUM_PANELS,
 	};
 
+	enum Dimension {
+		HORIZONTAL,
+		VERTICAL
+	};
+
+	enum ClipType {
+		LEFT = 0b1,
+		RIGHT = 0b10,
+		TOP = 0b100,
+		BOTTOM = 0b1000
+	};
+
 	struct DrawArea {
 		uint32_t xPos, yPos;
 		uint32_t width, height;
@@ -68,6 +80,10 @@ public:
 	DrawArea* getDrawArea();
 	Rect getDrawArea(int panelId);
 	void setDrawArea(Rect* rect, uint8_t border_width);
+	void clampDimension(uint32_t& dim, Dimension d, int panel = -1);
+	uint16_t validate(Geometry* g, uint32_t bounds[], int panel = -1);
+	Line clipLine(const Line& l, const uint32_t bounds[], const uint16_t& clipType, int panel);
+	Rect clipRect(const Rect& r, const uint32_t bounds[], const uint16_t& clipType, int panel);
 	void updateRenderArea(const Point2d& p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
 	void updateRenderArea(const Camera& c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void updateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
@@ -77,7 +93,6 @@ public:
 	void updateRenderArea(const Tri& t, int panel, uint32_t colour = 0x555555, bool valid = false);
 	void updateRenderArea(const Rect& r, int panel, uint32_t colour = 0x333333, bool valid = false);
 	void updateRenderArea(const Circle& c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
-	void updateGeometry();
 	void drawRenderArea(HDC hdc);
 	void clearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
 	int getFocus();
@@ -91,12 +106,14 @@ public:
 private:
 	DrawArea draw_area_;
 
-	bool validate(const Point2d& p, int panel = -1);
-	bool validate(const Camera& c, int panel = -1);
-	bool validate(const Line& l, int panel = -1);
-	bool validate(const Rect& rect, int panel = -1);
-	bool validate(const Circle& c, int panel = -1);
-	Line clipLine(Line l);
+	uint16_t validate(const Point2d& p, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Line& l, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Rect& rect, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Circle& c, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Camera& c, uint32_t bounds[], int panel = -1);
+	uint32_t calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX);
+	uint32_t calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY);
+	void clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper);
 };
 
 #endif

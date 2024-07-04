@@ -71,6 +71,8 @@ int Input::vkToKey(WPARAM w_param) {
 		return S_DOWN;
 	case 0x44: // D
 		return D_DOWN;
+	case 0x80:
+		return ML_DOWN;
 	default:
 		return 0;
 	}

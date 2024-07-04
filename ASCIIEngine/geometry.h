@@ -21,21 +21,23 @@ public:
 	uint32_t x, y;
 
 	Point2d() { x = 0; y = 0; };
-	Point2d(POINT p) { x = p.x; y = p.y; };
-	Point2d(const Point2d& source) { x = source.x; y = source.y; };
-	Point2d(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; };
+	Point2d(POINT p) { x = p.x; y = p.y; initialized = true; };
+	Point2d(const Point2d& source) { x = source.x; y = source.y; initialized = true; };
+	Point2d(uint32_t p_x, uint32_t p_y) { x = p_x; y = p_y; initialized = true; };
 
 	bool operator == (Point2d const& obj) const {
 		return x == obj.x && y == obj.y;
-	}
+	};
 
 	bool operator != (Point2d const& obj) const {
 		return x != obj.x || y != obj.y;
-	}
+	};
 
+	bool isInitialized() { return initialized; };
 	int displacementFrom(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
-	void setX(uint32_t x) { this->x = x; };
-	void setY(uint32_t y) { this->y = y; };
+
+private:
+	bool initialized = false;
 };
 
 class Point3d : public Point2d {
@@ -108,6 +110,7 @@ protected:
 private:
 	int comparePointVectorByCoordinate(CompareType compare_type, const std::vector<Point2d>* v, const int begin = -1, const int end = -1);
 	int comparePointPairByCoordinate(CompareType compare_type, const Point2d* p1, const Point2d* p2);
+	uint8_t comparePointPairByCoordinates(const Point2d* p1, const Point2d* p2);
 	bool compareBySlope(float f1, float f2);
 };
 
@@ -120,6 +123,10 @@ public:
 	Line(const Point2d& a, const Point2d& b);
 
 	bool collidesWith(Point2d p) { return false; }
+	bool isInitialized() { return initialized; }
+
+private:
+	bool initialized = false;
 };
 
 class Tri : public Geometry {

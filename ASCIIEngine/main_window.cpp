@@ -147,9 +147,12 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		// Check for top-down focus lock before calculating square end point
 		if (MW::getRenderer()->getFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
 			MW::geo_end = MW::event_message.pt;
+			MW::getRenderer()->clampDimension(MW::geo_end.x, Renderer::Dimension::HORIZONTAL, 0);
+			MW::getRenderer()->clampDimension(MW::geo_end.y, Renderer::Dimension::VERTICAL, 0);
 
 			if (MW::geo_start.displacementFrom(MW::geo_end) > 10) {
 				Rect* rect = new Rect(MW::geo_start, MW::geo_end);
+
 				Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 				dbg.setMsg(&MW::event_message);
 				dbg.setPanelId(MW::current_panel_);
@@ -301,7 +304,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		MW::getRenderer()->clearRenderArea(true);
 		// Draw highlight line for click and hold
-		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0) {
+		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0 && MW::geo_start.isInitialized()) {
 			MW::getRenderer()->updateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
 		}
 		// Draw geometry queue from oldest to newest
@@ -312,7 +315,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		// Draw quadtree grid
 		std::vector<Line*>* grid = MW::qt->getQuadtreeGrid();
 		for (int i = 0; i < grid->size(); i++) {
-			MW::getRenderer()->updateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, false);
+			MW::getRenderer()->updateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, true);
 		}
 		// Draw updated RenderArea to screen
 		MW::getRenderer()->drawRenderArea(hdc);
@@ -377,6 +380,7 @@ int MainWindow::getCursorFocus(Point2d p) {
 
 void MainWindow::addGeometry(Geometry* g) {
 
+	// We will want to clip the geometry before adding it to the queue, otherwise we have to clip it every frame
 	MW::geometryQueue.push_back(g);
 	MW::qt->addGeometry(g);
 }
