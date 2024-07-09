@@ -101,7 +101,8 @@ public:
 		G_NUM_TYPES,
 	};
 	
-	virtual bool collidesWith(Point2d p) = 0;
+	virtual bool collidesWith(const Point2d& p) = 0;
+	virtual bool collidesWith(Geometry* g) = 0;
 
 protected:
 	int comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
@@ -122,11 +123,18 @@ public:
 	Line(const Geometry& source);
 	Line(const Point2d& a, const Point2d& b);
 
-	bool collidesWith(Point2d p) { return false; }
+	bool collidesWith(const Point2d& p) { return false; }
+	bool collidesWith(Geometry* g) { return false; }
+	double calculateSlope() { return static_cast<double>(getDy()) / getDx(); };
+	double calculateIntercept();
+	uint32_t calculateClippedY(uint32_t bound);
+	uint32_t calculateClippedX(uint32_t bound);
 	bool isInitialized() { return initialized; }
 
 private:
 	bool initialized = false;
+	int32_t getDx() { return vertices.at(1).x - vertices.at(0).x; };
+	int32_t getDy() { return vertices.at(1).y - vertices.at(0).y; };
 };
 
 class Tri : public Geometry {
@@ -137,7 +145,9 @@ public:
 	Tri(const Geometry& source);
 	Tri(const Point2d& a, const Point2d& b, const Point2d& c);
 
-	bool collidesWith(Point2d p) { return false; }
+	// Currently unimplemented
+	bool collidesWith(const Point2d& p) { return false; }
+	bool collidesWith(Geometry* g) { return false; }
 };
 
 // Four-sided shape that assumes orthogonal sides 
@@ -156,7 +166,8 @@ public:
 
 	int getWidth() { return this->rb.x - this->lt.x; };
 	int getHeight() { return this->rb.y - this->lt.y; };
-	bool collidesWith(Point2d p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
+	bool collidesWith(const Point2d& p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
+	bool collidesWith(Geometry* g);
 };
 
 class Quad : public Geometry {
@@ -187,7 +198,8 @@ class Quad : public Geometry {
 		//}*/
 	}
 
-	bool collidesWith(Point2d p) { return false; }
+	bool collidesWith(const Point2d& p) { return false; }
+	bool collidesWith(Geometry* g) { return false; }
 };
 
 class Circle : public Geometry {
@@ -201,7 +213,8 @@ public:
 	Circle(const Circle& source);
 	Circle(const Geometry& source);
 
-	bool collidesWith(Point2d p) { return center.displacementFrom(p) <= r; }
+	bool collidesWith(const Point2d& p) { return center.displacementFrom(p) <= r; }
+	bool collidesWith(Geometry* g) { return false; }
 };
 
 class Camera : public Ray2d {

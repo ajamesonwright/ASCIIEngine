@@ -20,6 +20,9 @@ namespace MainWindow {
 	int run_state_;
 	int draw_mode_;
 
+	// draw shape outline flag
+	int outlineType = 0;
+
 	// current mouseover panel
 	int current_panel_ = -1;
 

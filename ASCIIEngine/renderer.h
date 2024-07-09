@@ -34,6 +34,8 @@ public:
 	struct DrawArea {
 		uint32_t xPos, yPos;
 		uint32_t width, height;
+		uint16_t screensWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		uint16_t screensHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 		Rect panels[NUM_PANELS];
 		void* data;
 		bool update;
@@ -111,9 +113,7 @@ private:
 	uint16_t validate(const Rect& rect, uint32_t bounds[], int panel = -1);
 	uint16_t validate(const Circle& c, uint32_t bounds[], int panel = -1);
 	uint16_t validate(const Camera& c, uint32_t bounds[], int panel = -1);
-	uint32_t calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX);
-	uint32_t calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY);
-	void clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper);
+	void clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper, const uint32_t screenDim);
 };
 
 #endif

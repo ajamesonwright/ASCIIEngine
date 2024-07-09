@@ -157,8 +157,34 @@ Line::Line(const Point2d& a, const Point2d& b) : Geometry(G_LINE) {
 	vertices.push_back(b);
 	initialized = true;
 	return;
+}
 
+double Line::calculateIntercept() {
+	return vertices.at(0).y - calculateSlope() * vertices.at(0).x;
+}
+
+uint32_t Line::calculateClippedY(uint32_t bound) {
+	double m = calculateSlope();
+	double b = calculateIntercept();
+	double D = m * bound + b;
+	uint32_t d = static_cast<uint32_t>(D);
 	
+	if (D - d > 0.5) {
+		return d + 1;
+	}
+	return d;
+}
+
+uint32_t Line::calculateClippedX(uint32_t bound) {
+	double m = calculateSlope();
+	double b = calculateIntercept();
+	double D = (bound - b) / m;
+	uint32_t d = static_cast<uint32_t>(D);
+
+	if (D - d > 0.5) {
+		return d + 1;
+	}
+	return d;
 }
 
 Tri::Tri(const Tri& source) : Geometry(G_TRI) {
@@ -256,7 +282,31 @@ Rect::Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) : Geome
 	vertices.push_back(lt);
 	vertices.push_back(rt);
 	vertices.push_back(rb);
-};
+}
+
+bool Rect::collidesWith(Geometry* g) {
+	/*switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+		Line l = static_cast<Line>(*g);
+		bool lineVertexInside = collidesWith(l.vertices.at(0)) || collidesWith(l.vertices.at(1));
+
+	} break;
+	case (Geometry::G_TRI):
+	{
+
+	} break;
+	case (Geometry::G_RECT):
+	{
+
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}*/
+	return false;
+}
 
 Quad::Quad(const Quad& source) {
 	if (source.type != G_QUAD || source.vertices.size() != 4)

@@ -305,7 +305,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::getRenderer()->clearRenderArea(true);
 		// Draw highlight line for click and hold
 		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0 && MW::geo_start.isInitialized()) {
+			Point2d p = MW::event_message.pt;
 			MW::getRenderer()->updateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
+
+			if (MW::outlineType) {
+				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(MW::geo_start.x, p.y)), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(p.x, MW::geo_start.y)), Renderer::TOP_DOWN, 0xff00, false);
+
+				MW::getRenderer()->updateRenderArea(Line(Point2d(MW::geo_start.x, p.y), p), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(Point2d(p.x, MW::geo_start.y), p), Renderer::TOP_DOWN, 0xff00, false);
+			}
 		}
 		// Draw geometry queue from oldest to newest
 		MW::renderer_->updateRenderArea(*MW::camera, Renderer::TOP_DOWN);

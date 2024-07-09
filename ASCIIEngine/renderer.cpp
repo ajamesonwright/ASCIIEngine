@@ -57,9 +57,10 @@ void Renderer::setDrawArea(Rect* rect_inc, uint8_t border_width) {
 }
 
 void Renderer::clampDimension(uint32_t& dim, Dimension d, int panel) {
-	uint32_t lower = d == HORIZONTAL ? draw_area_.panels[panel].lt.x : draw_area_.panels[panel].lt.x;
+	uint32_t screenDim = d == HORIZONTAL ? draw_area_.screensWidth : draw_area_.screensHeight;
+	uint32_t lower = d == HORIZONTAL ? draw_area_.panels[panel].lt.x : draw_area_.panels[panel].lt.y;
 	uint32_t upper = d == HORIZONTAL ? draw_area_.panels[panel].rb.x : draw_area_.panels[panel].rb.y;
-	clampDimension(dim, lower, upper);
+	clampDimension(dim, lower, upper, screenDim);
 }
 
 uint16_t Renderer::validate(Geometry* g, uint32_t bounds[], int panel) {
@@ -447,13 +448,10 @@ uint16_t Renderer::validate(const Point2d& p, uint32_t bounds[], int panel) {
 		}
 	}
 
-	uint16_t screensWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
-	uint16_t screensHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
-
-	result |= (int)(p.x < bounds[0] || p.x >= screensWidth) * LEFT;
-	result |= (int)(p.x > bounds[1] && p.x <= screensWidth) * RIGHT;
-	result |= (int)(p.y < bounds[2] || p.y >= screensHeight) * TOP;
-	result |= (int)(p.y > bounds[3] && p.y <= screensHeight) * BOTTOM;
+	result |= (int)(p.x < bounds[0] || p.x > draw_area_.screensWidth) * LEFT;
+	result |= (int)(p.x > bounds[1] && p.x <= draw_area_.screensWidth) * RIGHT;
+	result |= (int)(p.y < bounds[2] || p.y > draw_area_.screensHeight) * TOP;
+	result |= (int)(p.y > bounds[3] && p.y <= draw_area_.screensHeight) * BOTTOM;
 
 	return result;
 }
@@ -503,23 +501,24 @@ Line Renderer::clipLine(const Line& l, const uint32_t bounds[], const uint16_t& 
 	for (Point2d v : l.vertices) {
 		uint32_t boundX = ((clipType >> bitShift & LEFT) >> 0) * bounds[0] + ((clipType >> bitShift & RIGHT) >> 1) * bounds[1];
 		uint32_t boundY = ((clipType >> bitShift & TOP) >> 2) * bounds[2] + ((clipType >> bitShift & BOTTOM) >> 3) * bounds[3];
+		Line line = Line(l);
 		if (boundX > 0) {
 			// Specify clipped Y value if the cursor is outside the left/right dims
-			uint32_t clippedY = calculateClippedY(l.vertices.at(0), l.vertices.at(1), boundX);
-			clampDimension(clippedY, bounds[2], bounds[3]);
+			uint32_t clippedY = line.calculateClippedY(boundX);
+			clampDimension(clippedY, bounds[2], bounds[3], draw_area_.screensWidth);
 			vertexDimensions[(bitShift / 4) + index + 1] = clippedY;
 
 			if (boundY == 0) {
 				vertexDimensions[(bitShift / 4) + index] = boundX;
 			} else {
 				// Specify clipped X value if cursor is also outside the top/bottom dims
-				uint32_t clippedX = calculateClippedX(l.vertices.at(0), l.vertices.at(1), boundY);
-				clampDimension(clippedX, bounds[0], bounds[1]);
+				uint32_t clippedX = line.calculateClippedX(boundY);
+				clampDimension(clippedX, bounds[0], bounds[1], draw_area_.screensHeight);
 				vertexDimensions[(bitShift / 4) + index] = clippedX;
 			}
 		}
 		if (boundY > 0 && boundX == 0) {
-			vertexDimensions[(bitShift / 4) + index] = calculateClippedX(l.vertices.at(0), l.vertices.at(1), boundY);
+			vertexDimensions[(bitShift / 4) + index] = line.calculateClippedX(boundY);
 			vertexDimensions[(bitShift / 4) + index + 1] = boundY;
 		}
 		index++;
@@ -528,7 +527,7 @@ Line Renderer::clipLine(const Line& l, const uint32_t bounds[], const uint16_t& 
 	return Line(Point2d(vertexDimensions[0], vertexDimensions[1]), Point2d(vertexDimensions[2], vertexDimensions[3]));
 }
 
-//Rect Renderer::clipRect(const Rect& r, const uint32_t bounds[], const uint16_t& clipType, int panel) {
+// TODO - remove this once collisions are complete. The clipping occurs before insertion to the geometry queue
 Rect Renderer::clipRect(const Rect & r, const uint32_t bounds[], const uint16_t & clipType, int panel) {
 	uint32_t dimensions[4] = { r.lt.x, r.lt.y, r.rb.x, r.rb.y }; // left, top, right, bottom
 	int index = 0;
@@ -536,22 +535,23 @@ Rect Renderer::clipRect(const Rect & r, const uint32_t bounds[], const uint16_t 
 	for (Point2d v : r.vertices) {
 		uint32_t boundX = ((clipType >> bitShift & LEFT) >> 0) * bounds[0] + ((clipType >> bitShift & RIGHT) >> 1) * bounds[1];
 		uint32_t boundY = ((clipType >> bitShift & TOP) >> 2) * bounds[2] + ((clipType >> bitShift & BOTTOM) >> 3) * bounds[3];
+		Line line = Line(r.lt, r.rb);
 		if (boundX > 0) {
-			uint32_t clippedY = calculateClippedY(r.lt, r.rb, boundX);
-			clampDimension(clippedY, bounds[2], bounds[3]);
+			uint32_t clippedY = line.calculateClippedY(boundX);
+			clampDimension(clippedY, bounds[2], bounds[3], draw_area_.screensWidth);
 			dimensions[(bitShift / 4) + index + 1] = clippedY;
 
 			if (boundY == 0) {
 				dimensions[(bitShift / 4) + index] = boundX;
 			} else {
 				// Specify clipped X value if cursor is also outside the top/bottom dims
-				uint32_t clippedX = calculateClippedX(r.lt, r.rb, boundY);
-				clampDimension(clippedX, bounds[0], bounds[1]);
+				uint32_t clippedX = line.calculateClippedX(boundY);
+				clampDimension(clippedX, bounds[0], bounds[1], draw_area_.screensHeight);
 				dimensions[(bitShift / 4) + index] = clippedX;
 			}
 		}
 		if (boundY > 0 && boundX == 0) {
-			dimensions[(bitShift / 4) + index] = calculateClippedX(r.lt, r.rb, boundY);
+			dimensions[(bitShift / 4) + index] = line.calculateClippedX(boundY);
 			dimensions[(bitShift / 4) + index + 1] = boundY;
 		}
 		index++;
@@ -560,45 +560,46 @@ Rect Renderer::clipRect(const Rect & r, const uint32_t bounds[], const uint16_t 
 	return Rect(Point2d(dimensions[0], dimensions[1]), Point2d(dimensions[2], dimensions[3]));
 }
 
-uint32_t Renderer::calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX) {
-	int32_t dx = (p2.x - p1.x);
-	int32_t dy = (p2.y - p1.y);
+//uint32_t Renderer::calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX) {
+//
+//	int32_t dx = (p2.x - p1.x);
+//	int32_t dy = (p2.y - p1.y);
+//
+//	double m = static_cast<double>(dy) / dx;
+//	double b = p1.y - m * p1.x;
+//	double D = m * boundX + b;
+//	int32_t Y;
+//	if (D - (int)D > 0.5) {
+//		Y = static_cast<int32_t>(D + 1);
+//	} else {
+//		Y = static_cast<int32_t>(D);
+//	}
+//
+//	return Y;
+//}
+//
+//uint32_t Renderer::calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY) {
+//	int32_t dx = (p2.x - p1.x);
+//	int32_t dy = (p2.y - p1.y);
+//
+//	double m = static_cast<double>(dy) / dx;
+//	double b = p1.y - m * p1.x;
+//	double D = (boundY - b) / m;
+//
+//	int32_t X;
+//	if (D - (int)D > 0.5) {
+//		X = static_cast<int32_t>(D + 1);
+//	} else {
+//		X = static_cast<int32_t>(D);
+//	}
+//
+//	return X;
+//}
 
-	double m = static_cast<double>(dy) / dx;
-	double b = p1.y - m * p1.x;
-	double D = m * boundX + b;
-	int32_t Y;
-	if (D - (int)D > 0.5) {
-		Y = static_cast<int32_t>(D + 1);
-	} else {
-		Y = static_cast<int32_t>(D);
-	}
-
-	return Y;
-}
-
-uint32_t Renderer::calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY) {
-	int32_t dx = (p2.x - p1.x);
-	int32_t dy = (p2.y - p1.y);
-
-	double m = static_cast<double>(dy) / dx;
-	double b = p1.y - m * p1.x;
-	double D = (boundY - b) / m;
-
-	int32_t X;
-	if (D - (int)D > 0.5) {
-		X = static_cast<int32_t>(D + 1);
-	} else {
-		X = static_cast<int32_t>(D);
-	}
-
-	return X;
-}
-
-void Renderer::clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper) {
-	if (dim < lower) {
+void Renderer::clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper, const uint32_t screenDim) {
+	if (dim < lower || dim > screenDim) {
 		dim = lower;
-	} else if (dim > upper) {
+	} else if (dim > upper && dim <= screenDim) {
 		dim = upper;
 	}
 }
