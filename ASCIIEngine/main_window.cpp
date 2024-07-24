@@ -59,6 +59,31 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			// allow debug messaging toggle
 			Debug::ToggleDebugPrinting();
 		} break;
+		case (0x4C):
+		{
+			// 'L'
+			MW::setDrawMode(DrawMode::D_LINE);
+		} break;
+		case (0x54):
+		{
+			// 'T'
+			MW::setDrawMode(DrawMode::D_TRI);
+		} break;
+		case (0x52):
+		{
+			// 'R'
+			MW::setDrawMode(DrawMode::D_RECT);
+		} break;
+		case (0x51):
+		{
+			// 'Q'
+			MW::setDrawMode(DrawMode::D_QUAD);
+		} break;
+		case (0x43):
+		{
+			// 'C'
+			MW::setDrawMode(DrawMode::D_CIRCLE);
+		} break;
 		case (VK_ESCAPE):
 		{
 			MW::input_->clearInput();
@@ -106,6 +131,14 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 	} break;
 	case WM_LBUTTONDOWN:
 	{
+		bool insideExistingGeometry = false;
+		Point2d start = MW::event_message.pt;
+		for (const auto g : MW::geometryQueue) {
+			if (g->checkCollisionWith(start)) {
+				// Disallow starting new geometry when starting from insde existing geometry
+				insideExistingGeometry = true;
+			}
+		}
 		{
 			Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::INPUT_DETECTED);
 			dbg.setMsg(&MW::event_message);
@@ -113,6 +146,9 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 			dbg.Print();
 		}
 
+		if (insideExistingGeometry) {
+			break;
+		}
 		if (MW::getRenderer()->getFocusLock() == -1 && MW::current_panel_ != Renderer::BACKGROUND) {
 			MW::getRenderer()->setFocusLock(MW::current_panel_);
 			Debug::DebugMessage dbg(CallingClasses::MAIN_WINDOW_CLASS, DebugTypes::PANEL_LOCK);
@@ -147,20 +183,50 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		// Check for top-down focus lock before calculating square end point
 		if (MW::getRenderer()->getFocusLock() == 0 && !MW::input_->input_state[ML_DOWN].held) {
 			MW::geo_end = MW::event_message.pt;
-			MW::getRenderer()->clampDimension(MW::geo_end.x, Renderer::Dimension::HORIZONTAL, 0);
-			MW::getRenderer()->clampDimension(MW::geo_end.y, Renderer::Dimension::VERTICAL, 0);
 
 			if (MW::geo_start.displacementFrom(MW::geo_end) > 10) {
-				Rect* rect = new Rect(MW::geo_start, MW::geo_end);
+				Geometry* g;
 
 				Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
 				dbg.setMsg(&MW::event_message);
 				dbg.setPanelId(MW::current_panel_);
+				dbg.setDrawMode(MW::draw_mode_);
+
+				switch (MW::draw_mode_) {
+				case (D_TRI): {
+					// draw a triangle
+					Tri* tri = new Tri(MW::highlightLine.vertices.at(0), MW::highlightLine.vertices.at(1), Point2d(100, 100));
+					g = tri;
+				} break;
+				case (D_QUAD): {
+					// draw a quad
+					Point2d b = Point2d(MW::highlightLine.vertices.at(0).x, MW::highlightLine.vertices.at(1).y);
+					Point2d d = Point2d(MW::highlightLine.vertices.at(1).x, MW::highlightLine.vertices.at(0).y);
+					Quad* quad = new Quad(MW::highlightLine.vertices.at(0), b, MW::highlightLine.vertices.at(1), d);
+					g = quad;
+				} break;
+				case (D_CIRCLE): {
+					// draw a circle
+					Circle* circ = new Circle(MW::highlightLine.vertices.at(0), MW::highlightLine.vertices.at(1));
+					g = circ;
+				} break;
+				default: {
+					// draw a rectangle
+					Rect* rect = new Rect(MW::highlightLine.vertices.at(0), MW::highlightLine.vertices.at(1));
+					g = rect;
+				}
+				}
+				//Rect* rect = new Rect(MW::highlightLine.vertices.at(0), MW::highlightLine.vertices.at(1));
+
+				/*Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
+				dbg.setMsg(&MW::event_message);
+				dbg.setPanelId(MW::current_panel_);
 				dbg.setDrawMode(1);
-				dbg.setGeometry(rect);
+				dbg.setGeometry(rect);*/
+				dbg.setGeometry(g);
 				dbg.Print();
 
-				MW::addGeometry(rect);
+				MW::addGeometry(g);
 			}
 		}
 		MW::geo_start = Point2d();
@@ -258,9 +324,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		Rect* td_panel = MW::getDrawAreaPanel(Renderer::TOP_DOWN);
 		MW::camera = new Camera(td_panel->lt.x + td_panel->getWidth() / 2, td_panel->lt.y + td_panel->getHeight() / 2, -90);
 		MW::camera->setSize(20);
-		if (!MW::camera) {
-			throw std::runtime_error("Failed to create camera!");
-		}
 	    
 	    // set initial inputs
 		MW::input_ = new Input(MW::camera);
@@ -304,20 +367,52 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 		MW::getRenderer()->clearRenderArea(true);
 		// Draw highlight line for click and hold
-		if ((GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0 && MW::geo_start.isInitialized()) {
-			Point2d p = MW::event_message.pt;
-			MW::getRenderer()->updateRenderArea(Line(MW::geo_start, MW::event_message.pt), Renderer::TOP_DOWN, 0xff00, false);
+		if (MW::canDrawHightlightLine()) {
+			// Cast to custom point type and clamp to window dimensions
+			Point2d end = MW::event_message.pt;
+			MW::getRenderer()->clampDimension(end.x, Renderer::Dimension::HORIZONTAL, Renderer::BACKGROUND);
+			MW::getRenderer()->clampDimension(end.y, Renderer::Dimension::VERTICAL, Renderer::BACKGROUND);
+			MW::highlightLine = Line(MW::geo_start, end);
+
+			std::vector<Point2d> collisions;
+			std::vector<Line> sides;
+			for (Rect rect : MW::getRenderer()->getDrawArea()->panels) {
+				MW::highlightLine.checkCollisionWith(rect, collisions, sides);
+			}
+
+			std::vector<Line> interferingSides;
+			// Check for collisions against current geometry
+			for (int i = 0; i < MW::geometryQueue.size(); i++) {
+				MW::highlightLine.checkCollisionWith(MW::geometryQueue[i], collisions, interferingSides);
+			}
+			// Check for collisions against camera
+			MW::highlightLine.checkCollisionWith(MW::camera, collisions, sides);
+
+			int colour = 0xff00;
+			if (!collisions.empty()) {
+				colour = 0xff0000;
+				// Sort collisions by displacement from start of highlight line if required
+				if (collisions.size() > 1) {
+					Point2d start = MW::geo_start;
+					std::sort(collisions.begin(), collisions.end(), [&start](Point2d& p1, Point2d& p2) {
+						return p1.displacementFrom(start) < p2.displacementFrom(start);
+					});
+				}
+				// Clip to the geometry closest to start of line
+				MW::highlightLine = Line(MW::geo_start, Point2d(collisions.at(0)));
+			}
+			MW::getRenderer()->updateRenderArea(MW::highlightLine, Renderer::TOP_DOWN, colour, false);
 
 			if (MW::outlineType) {
-				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(MW::geo_start.x, p.y)), Renderer::TOP_DOWN, 0xff00, false);
-				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(p.x, MW::geo_start.y)), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(MW::geo_start.x, end.y)), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(end.x, MW::geo_start.y)), Renderer::TOP_DOWN, 0xff00, false);
 
-				MW::getRenderer()->updateRenderArea(Line(Point2d(MW::geo_start.x, p.y), p), Renderer::TOP_DOWN, 0xff00, false);
-				MW::getRenderer()->updateRenderArea(Line(Point2d(p.x, MW::geo_start.y), p), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(Point2d(MW::geo_start.x, end.y), end), Renderer::TOP_DOWN, 0xff00, false);
+				MW::getRenderer()->updateRenderArea(Line(Point2d(end.x, MW::geo_start.y), end), Renderer::TOP_DOWN, 0xff00, false);
 			}
 		}
 		// Draw geometry queue from oldest to newest
-		MW::renderer_->updateRenderArea(*MW::camera, Renderer::TOP_DOWN);
+		MW::renderer_->updateRenderArea(*MW::camera, Renderer::TOP_DOWN, MW::camera->colour);
 		for (int i = 0; i < MW::geometryQueue.size(); i++) {
 			MW::renderer_->updateRenderArea(MW::geometryQueue[i], Renderer::TOP_DOWN);
 		}
@@ -380,7 +475,7 @@ void MainWindow::setDrawMode(int p_draw_mode) {
 int MainWindow::getCursorFocus(Point2d p) {
 
 	for (int i = 0; i < Renderer::NUM_PANELS; i++) {
-		if (MW::getRenderer()->getDrawArea()->panels[i].collidesWith(p)) {
+		if (MW::getRenderer()->getDrawArea()->panels[i].checkCollisionWith(p)) {
 			return i;
 		}
 	}
@@ -410,20 +505,62 @@ void MainWindow::simulateFrame(float dt) {
 	MW::camera->vx = (MW::camera->vx + MW::camera->ax * dt) * 0.90f;
 	MW::camera->vy = (MW::camera->vy + MW::camera->ay * dt) * 0.90f;
 	MW::camera->clampVelocity();
+	// Incremental change in position
+	float dPx = MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
+	float dPy = MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
 
-	float delta_px = MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
-	float delta_py = MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
+	// Angular acceleration
+	MW::camera->aa = MW::camera->aa * 0.70f;
+	MW::camera->clampAngularAcceleration();
+	// Angular velocity
+	MW::camera->va = (MW::camera->va + MW::camera->aa * dt) * 0.90f;
+	// Incremental change in direction
+	float dTheta = MW::camera->va * dt;
 
+	bool collision = false;
+	Line xAxis = Line(Point2d(0, 0), Point2d(1, 0));
 	for (int i = 0; i < MW::geometryQueue.size(); i++) {
-		// find closest point on geometry and cast ray (draw line) for visual
+		std::vector<Point2d> collisions;
+		std::vector<Line> interferingSides;
+		MW::camera->leftSide.checkCollisionWith(MW::geometryQueue[i], collisions, interferingSides);
+		MW::camera->rightSide.checkCollisionWith(MW::geometryQueue[i], collisions, interferingSides);
 
+		if (!collisions.empty()) {
+			collision = true;
+			// Determine normal of each collision and adjust position of camera to remove collision
+			for (Point2d c : collisions) {
+				Line side = interferingSides.at(0);
+				//MW::camera->clampPosition(c, side);
+				//Point2d closest = MW::camera->findClosestBoundingVertex(c);
+				float angleOfInterferingSideToXAxis = xAxis.calculateAngle(interferingSides.at(0));
+				float cosx = cos(angleOfInterferingSideToXAxis);
+				float siny = sin(angleOfInterferingSideToXAxis);
+
+				if ((c.x - MW::camera->x) * MW::camera->ax > 0) {
+					dPx *= cosx;
+				}
+				if ((c.y - MW::camera->y) * MW::camera->ay > 0) {
+					dPy *= siny;
+
+				}
+			}
+		}
 	}
+	if (collision) {
+		MW::camera->colour = 0xff0000;
+	} else {
+		MW::camera->colour = 0xffffff;
+	}
+		
 	// p = p + v*t + 1/2*a*t^2
-	MW::camera->px = MW::camera->px + MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
-	MW::camera->py = MW::camera->py + MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
-	MW::camera->x = (uint32_t)(MW::camera->px + 0.75); // 0.75 added to account for truncation due to cast
-	MW::camera->y = (uint32_t)(MW::camera->py + 0.75);
+	MW::camera->px = MW::camera->px + dPx;
+	MW::camera->py = MW::camera->py + dPy;
+	MW::camera->x = (uint32_t)(MW::camera->px + 0.5);
+	MW::camera->y = (uint32_t)(MW::camera->py + 0.5);
 	MW::camera->clampPosition(*MW::getDrawAreaPanel(Renderer::TOP_DOWN));
+
+	MW::camera->direction = MW::camera->direction + dTheta;
+
 	MW::camera->update();
 
 	Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, CAMERA_STATUS);
@@ -523,4 +660,8 @@ void MainWindow::conditionMouseCoords(POINT& p) {
 	// 31 pixels is fixed for Y dimension due to title bar
 	p.y -= (MW::getMainWindowRect().lt.y + 31);
 	p.x -= (MW::getMainWindowRect().lt.x + MW::getMTCOffsetX());
+}
+
+bool MainWindow::canDrawHightlightLine() {
+	return (GetKeyState(VK_LBUTTON) & 0x80) != 0 && MW::getRenderer()->getFocusLock() == 0 && MW::geo_start.isInitialized();
 }

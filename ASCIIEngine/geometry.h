@@ -1,10 +1,13 @@
 #ifndef ASCIIENGINE_GEOMETRY_H_
 #define ASCIIENGINE_GEOMETRY_H_
 
-#include <Windows.h>
+#include <algorithm>
+#include <optional>
+#include <set>
 #include <stdint.h>
-#include <vector>
 #include <string>
+#include <vector>
+#include <Windows.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "debug.h"
@@ -34,7 +37,7 @@ public:
 	};
 
 	bool isInitialized() { return initialized; };
-	int displacementFrom(Point2d p) { return (int)sqrt(abs((int)(x - p.x)) * abs((int)(x - p.x)) + abs((int)(y - p.y)) * abs((int)(y - p.y))); };
+	const int displacementFrom(const Point2d& p) { return (int)sqrt((int)(x - p.x) * (int)(x - p.x) + (int)(y - p.y) * (int)(y - p.y)); };
 
 private:
 	bool initialized = false;
@@ -74,6 +77,7 @@ public:
 	Ray3d(uint32_t p_x, uint32_t p_y, uint32_t p_z, uint16_t p_yaw, uint16_t p_pitch) { x = p_x; y = p_y; z = p_z; yaw = p_yaw; pitch = p_pitch; };
 };
 
+class Line;
 class Geometry {
 
 public:
@@ -100,9 +104,9 @@ public:
 
 		G_NUM_TYPES,
 	};
-	
-	virtual bool collidesWith(const Point2d& p) = 0;
-	virtual bool collidesWith(Geometry* g) = 0;
+
+	virtual bool checkCollisionWith(const Point2d& p) = 0;
+	virtual void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) = 0;
 
 protected:
 	int comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
@@ -115,6 +119,8 @@ private:
 	bool compareBySlope(float f1, float f2);
 };
 
+class Rect;
+
 class Line : public Geometry {
 
 public:
@@ -123,10 +129,15 @@ public:
 	Line(const Geometry& source);
 	Line(const Point2d& a, const Point2d& b);
 
-	bool collidesWith(const Point2d& p) { return false; }
-	bool collidesWith(Geometry* g) { return false; }
+	bool checkCollisionWith(const Point2d& p);
+	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+	void checkCollisionWith(Rect r, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+	void checkCollisionWith(Camera* c, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+	void findIntersection(const Line& l, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 	double calculateSlope() { return static_cast<double>(getDy()) / getDx(); };
 	double calculateIntercept();
+	double calculateLength();
+	double calculateAngle(Line& l);
 	uint32_t calculateClippedY(uint32_t bound);
 	uint32_t calculateClippedX(uint32_t bound);
 	bool isInitialized() { return initialized; }
@@ -135,6 +146,9 @@ private:
 	bool initialized = false;
 	int32_t getDx() { return vertices.at(1).x - vertices.at(0).x; };
 	int32_t getDy() { return vertices.at(1).y - vertices.at(0).y; };
+	bool hasOverlappingDomain(Line l);
+	bool hasOverlappingRange(Line l);
+	void findIntersection(Line l, Point2d& intersection);
 };
 
 class Tri : public Geometry {
@@ -146,8 +160,8 @@ public:
 	Tri(const Point2d& a, const Point2d& b, const Point2d& c);
 
 	// Currently unimplemented
-	bool collidesWith(const Point2d& p) { return false; }
-	bool collidesWith(Geometry* g) { return false; }
+	bool checkCollisionWith(const Point2d& p) { return false; }
+	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 };
 
 // Four-sided shape that assumes orthogonal sides 
@@ -162,20 +176,21 @@ public:
 	Rect(const Geometry& source);
 	Rect(const Point2d& a, const Point2d& b);
 	Rect(const RECT& rect);
-	Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
+	//Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom);
 
 	int getWidth() { return this->rb.x - this->lt.x; };
 	int getHeight() { return this->rb.y - this->lt.y; };
-	bool collidesWith(const Point2d& p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
-	bool collidesWith(Geometry* g);
+	bool checkCollisionWith(const Point2d& p) { return (p.x >= lt.x && p.x <= rb.x && p.y >= lt.y && p.y <= rb.y); }
+	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 };
 
 class Quad : public Geometry {
 	
+public:
 	Quad() {};
 	Quad(const Quad& source);
 	Quad(const Geometry& source);
-	Quad(Point2d a, Point2d b, Point2d c, Point2d d) : Geometry(G_QUAD) {
+	Quad(const Point2d& a, const Point2d& b, const Point2d& c, const Point2d& d) : Geometry(G_QUAD) {
 
 		//// USE CONVEX HULL APPROACH TO SORT POINTS
 		//// FIND LOWEST Y COORD
@@ -198,8 +213,8 @@ class Quad : public Geometry {
 		//}*/
 	}
 
-	bool collidesWith(const Point2d& p) { return false; }
-	bool collidesWith(Geometry* g) { return false; }
+	bool checkCollisionWith(const Point2d& p) { return false; }
+	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 };
 
 class Circle : public Geometry {
@@ -210,21 +225,27 @@ public:
 
 	Circle() { center = Point2d(); r = 0; };
 	Circle(const Point2d& p_c, uint16_t p_r);
+	Circle(const Point2d& p_c, const Point2d& p_r);
 	Circle(const Circle& source);
 	Circle(const Geometry& source);
 
-	bool collidesWith(const Point2d& p) { return center.displacementFrom(p) <= r; }
-	bool collidesWith(Geometry* g) { return false; }
+	bool checkCollisionWith(const Point2d& p) { return center.displacementFrom(p) <= r; }
+	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+private:
+	void createVertexShell();
+	static const uint8_t SIDE_COUNT = 12;
 };
 
 class Camera : public Ray2d {
 
 	// Visual representation in top down panel, using an arrow to depict position and direction
 public:
-	uint8_t size;
-	float px, py, vx, vy, ax, ay;
-	uint16_t turn_speed = 150, move_speed = 1000;
+	uint8_t size; // Length from center point to base or tip
+	int colour = 0xffffff;
+	float px, py, vx, vy, ax, ay, va, aa;
+	uint16_t turn_speed = 10000, move_speed = 1000;
 	Point2d left, right, tip, base;
+	Line leftSide, rightSide, front, back;
 	uint8_t fov = 60;
 	uint16_t height = 1800;
 
@@ -237,8 +258,18 @@ public:
 	void clampDirection();
 	void clampPosition(Point2d p, Geometry* g);
 	void clampPosition(Rect panel);
+	void clampPosition(Point2d collision, Line l);
 	void clampVelocity();
 	void clampAcceleration();
+	void clampAngularAcceleration();
+	Point2d findClosestBoundingVertex(const Point2d& collision);
+
+private:
+	uint8_t xOffset = 5;
+	uint8_t yOffset = 10;
+	double theta = atan(yOffset / xOffset) * 180 / M_PI;                   // angle of hypotenuse of right angle triangle formed by xOffset and yOffset
+	double c2C = sqrt(xOffset * xOffset + yOffset * yOffset); // centre of camera to corner of bounding box
+	Point2d boundingBox[4]; // lb, lt, rt, rb
 };
 
 #endif

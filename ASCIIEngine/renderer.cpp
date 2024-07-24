@@ -172,7 +172,6 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 
 		int limit = abs((int)(clippedLine.vertices.at(0).y - clippedLine.vertices.at(1).y));
 		for (int i = 0; i < limit; i++) {
-			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
 			p.y++;
 		}
@@ -185,7 +184,6 @@ void Renderer::updateRenderArea(const Line& l, int panel, uint32_t colour, bool 
 
 		int limit = abs((int)(clippedLine.vertices.at(0).x - clippedLine.vertices.at(1).x));
 		for (int i = 0; i < limit; i++) {
-			// TODO: valid flag will need to account for clipping (maybe alter line object sent for rendering to ensure all points reside in viewport?)
 			updateRenderArea(p, panel, colour, true);
 			p.x++;
 		}
@@ -264,8 +262,6 @@ void Renderer::updateRenderArea(const Rect& p_rect, int panel, uint32_t colour, 
 	}
 
 	// for now, assuming that no rasterization is required (all lines are horizontal or vertical)
-	//Rect rect = p_rect;
-	// not optimized for fewest iterations (ie. does not determine whether it is more efficient to do length then width or vice versa)
 	Point2d p = { clippedRect.lt.x, clippedRect.rb.y };
 	for (uint32_t i = clippedRect.rb.y; i >= clippedRect.lt.y; i--) {
 		for (uint32_t j = clippedRect.lt.x; j <= clippedRect.rb.x; j++) {
@@ -290,12 +286,15 @@ void Renderer::updateRenderArea(const Circle& p_circle, int panel, uint32_t colo
 
 	Circle c = p_circle;
 
-	updateRenderArea(p_circle.center, panel, colour, true);
-	for (int i = 0; i < 360; i += 30) {
+	//updateRenderArea(p_circle.center, panel, colour, true);
+	for (Point2d v : c.vertices) {
+		updateRenderArea(v, panel, colour, true);
+	}
+	/*for (int i = 0; i < 360; i += 30) {
 		double x = c.center.x + (c.r * cos(i * M_PI / 180));
 		double y = c.center.y + (c.r * sin(i * M_PI / 180));
 		updateRenderArea(Point2d((uint32_t)x, (uint32_t)y), panel, colour, true);
-	}
+	}*/
 }
 
 void Renderer::drawRenderArea(HDC hdc) {
@@ -338,7 +337,7 @@ void Renderer::clearRenderArea(bool force, int panel, uint32_t p_colour) {
 				width = 0;
 
 				current_pixel = Point2d(j, draw_area_.height - i);
-				if (draw_area_.panels[TOP_DOWN].collidesWith(current_pixel)) {
+				if (draw_area_.panels[TOP_DOWN].checkCollisionWith(current_pixel)) {
 					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
 					width = draw_area_.panels[TOP_DOWN].getWidth();
@@ -350,7 +349,7 @@ void Renderer::clearRenderArea(bool force, int panel, uint32_t p_colour) {
 					*pixel++ = colour;
 					continue;
 				}
-				if (draw_area_.panels[FIRST_PERSON].collidesWith(current_pixel)) {
+				if (draw_area_.panels[FIRST_PERSON].checkCollisionWith(current_pixel)) {
 					// set counter to 0 and width to width of one horizontal chunk of panel for reiteration above
 					pixel_count = 0;
 					width = draw_area_.panels[FIRST_PERSON].getWidth();

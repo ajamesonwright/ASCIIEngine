@@ -43,9 +43,8 @@ bool Input::getInput(int key_code) {
 void Input::handleInput(MSG* msg, float dt) {
 	Debug::DebugMessage dbg = Debug::DebugMessage(CallingClasses::INPUT_CLASS, DebugTypes::INPUT_STATUS);
 	Debug::Print(&dbg);
-	if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
-	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);
-	camera->clampDirection();
+	/*if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
+	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);*/
 
 	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
 	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
@@ -58,6 +57,13 @@ void Input::handleInput(MSG* msg, float dt) {
 		camera->ay += (float)cosy;
 		camera->ax -= (float)sinx;
 	}
+	if (input_state[A_DOWN].held) {
+		camera->aa -= (float)camera->turn_speed;// * dt;
+	}
+	if (input_state[D_DOWN].held) {
+		camera->aa += (float)camera->turn_speed;// *dt;
+	}
+	//camera->clampDirection();
 }
 
 int Input::vkToKey(WPARAM w_param) {

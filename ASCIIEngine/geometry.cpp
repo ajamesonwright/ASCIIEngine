@@ -125,8 +125,6 @@ void Geometry::sortBySlope(std::vector<Point2d>& vertices, const std::vector<flo
 			if (slopes[i] < slopes[i + 1])
 				std::swap(vertices[i + 1], vertices[i + 2]);
 		}
-
-		
 	}
 }
 
@@ -149,9 +147,6 @@ Line::Line(const Geometry& source) {
 };
 
 Line::Line(const Point2d& a, const Point2d& b) : Geometry(G_LINE) {
-	if (a == b)
-		return;
-
 	vertices.clear();
 	vertices.push_back(a);
 	vertices.push_back(b);
@@ -159,8 +154,70 @@ Line::Line(const Point2d& a, const Point2d& b) : Geometry(G_LINE) {
 	return;
 }
 
+bool Line::checkCollisionWith(const Point2d& p) {
+	return calculateClippedY(p.x) == p.y;
+}
+
+void Line::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+		Line l = static_cast<Line>(*g);
+		findIntersection(l, collisions, interferingSides);
+	} break;
+	case (Geometry::G_TRI):
+	{
+		Tri t = static_cast<Tri>(*g);
+		Line sides[3] = { Line(t.vertices.at(0), t.vertices.at(1)), Line(t.vertices.at(1), t.vertices.at(2)), Line(t.vertices.at(2), t.vertices.at(0)) };
+		for (Line l : sides) {
+			findIntersection(l, collisions, interferingSides);
+		}
+	} break;
+	case (Geometry::G_RECT):
+	{
+		Rect r = static_cast<Rect>(*g);
+		checkCollisionWith(r, collisions, interferingSides);
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}
+}
+
+void Line::checkCollisionWith(Rect r, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	Line sides[4] = { Line(r.lb, r.lt), Line(r.lt, r.rt), Line(r.rt, r.rb), Line(r.rb, r.lb) };
+	for (Line l : sides) {
+		findIntersection(l, collisions, interferingSides);
+	}
+}
+
+void Line::checkCollisionWith(Camera* c, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	Line sides[4] = { c->leftSide, c->front, c->rightSide, c->back };
+	for (Line l : sides) {
+		findIntersection(l, collisions, interferingSides);
+	}
+}
+
+void Line::findIntersection(const Line& l, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	Point2d intersection;
+	findIntersection(l, intersection);
+	if (intersection.isInitialized()) {
+		collisions.push_back(intersection);
+		interferingSides.push_back(l);
+	}
+}
+
 double Line::calculateIntercept() {
 	return vertices.at(0).y - calculateSlope() * vertices.at(0).x;
+}
+
+double Line::calculateLength() {
+	return sqrt(getDx() * getDx() + getDy() * getDy());
+}
+
+double Line::calculateAngle(Line& l) {
+	return acos((getDx() * l.getDx() + getDy() * l.getDy()) / (calculateLength() * l.calculateLength()));
 }
 
 uint32_t Line::calculateClippedY(uint32_t bound) {
@@ -176,6 +233,10 @@ uint32_t Line::calculateClippedY(uint32_t bound) {
 }
 
 uint32_t Line::calculateClippedX(uint32_t bound) {
+	// Special case for vertical line
+	if (getDx() == 0) {
+		return vertices.at(0).x;
+	}
 	double m = calculateSlope();
 	double b = calculateIntercept();
 	double D = (bound - b) / m;
@@ -185,6 +246,64 @@ uint32_t Line::calculateClippedX(uint32_t bound) {
 		return d + 1;
 	}
 	return d;
+}
+
+bool Line::hasOverlappingDomain(Line l) {
+	// Calculate the range of x values commons to both lines
+	uint32_t minX = min(vertices.at(0).x, vertices.at(1).x);
+	uint32_t maxX = max(vertices.at(0).x, vertices.at(1).x);
+	uint32_t minLX = min(l.vertices.at(0).x, l.vertices.at(1).x);
+	uint32_t maxLX = max(l.vertices.at(0).x, l.vertices.at(1).x);
+	return (minX >= minLX && minX <= maxLX
+		|| maxX >= minLX && maxX <= maxLX
+		|| minLX >= minX && minLX <= maxX
+		|| maxLX >= minX && maxLX <= maxX);
+}
+
+bool Line::hasOverlappingRange(Line l) {
+	// Calculate the range of y values commons to both lines
+	uint32_t minY = min(vertices.at(0).y, vertices.at(1).y);
+	uint32_t maxY = max(vertices.at(0).y, vertices.at(1).y);
+	uint32_t minLY = min(l.vertices.at(0).y, l.vertices.at(1).y);
+	uint32_t maxLY = max(l.vertices.at(0).y, l.vertices.at(1).y);
+	return (minY >= minLY && minY <= maxLY
+		|| maxY >= minLY && maxY <= maxLY
+		|| minLY >= minY && minLY <= maxY
+		|| maxLY >= minY && maxLY <= maxY);
+}
+
+void Line::findIntersection(Line l, Point2d& intersection) {
+	
+	// Line AB represented as a1x + b1y = c1
+	double a1 = static_cast<double>(l.vertices.at(1).y) - l.vertices.at(0).y; // cast to double to prevent unsigned calculation from rolling over
+	double b1 = static_cast<double>(l.vertices.at(0).x) - l.vertices.at(1).x;
+	double c1 = a1 * (l.vertices.at(0).x) + b1 * (l.vertices.at(0).y);
+
+	// Line CD represented as a2x + b2y = c2
+	double a2 = static_cast<double>(vertices.at(1).y) - vertices.at(0).y;
+	double b2 = static_cast<double>(vertices.at(0).x) - vertices.at(1).x;
+	double c2 = a2 * (vertices.at(0).x) + b2 * (vertices.at(0).y);
+
+	double determinant = a1 * b2 - a2 * b1;
+
+	if (determinant != 0) {
+		uint32_t minX = min(vertices.at(0).x, vertices.at(1).x);
+		uint32_t maxX = max(vertices.at(0).x, vertices.at(1).x);
+		uint32_t minY = min(vertices.at(0).y, vertices.at(1).y);
+		uint32_t maxY = max(vertices.at(0).y, vertices.at(1).y);
+		uint32_t minLX = min(l.vertices.at(0).x, l.vertices.at(1).x);
+		uint32_t maxLX = max(l.vertices.at(0).x, l.vertices.at(1).x);
+		uint32_t minLY = min(l.vertices.at(0).y, l.vertices.at(1).y);
+		uint32_t maxLY = max(l.vertices.at(0).y, l.vertices.at(1).y);
+
+		uint32_t x = static_cast<uint32_t>((b2 * c1 - b1 * c2) / determinant + 0.5);
+		uint32_t y = static_cast<uint32_t>((a1 * c2 - a2 * c1) / determinant + 0.5);
+
+		if (x >= minX && x <= maxX && y >= minY && y <= maxY &&
+			x >= minLX && x <= maxLX && y >= minLY && y <= maxLY) {
+			intersection = Point2d(x, y);
+		}
+	}
 }
 
 Tri::Tri(const Tri& source) : Geometry(G_TRI) {
@@ -217,6 +336,26 @@ Tri::Tri(const Point2d& a, const Point2d& b, const Point2d& c) : Geometry(G_TRI)
 	if (index != 1)
 		std::swap(vertices.at(1), vertices.at(index));
 };
+
+void Tri::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+	} break;
+	case (Geometry::G_TRI):
+	{
+
+	} break;
+	case (Geometry::G_RECT):
+	{
+
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}
+}
 
 Rect::Rect(const Rect& source) {
 	if (source.vertices.size() != 4)
@@ -272,25 +411,25 @@ Rect::Rect(const RECT& rect) : Geometry(G_RECT) {
 	vertices.push_back(rb);
 };
 
-Rect::Rect(uint32_t left, uint32_t top, uint32_t right, uint32_t bottom) : Geometry(G_RECT) {
-	lb = Point2d(left, bottom);
-	lt = Point2d(left, top);
-	rt = Point2d(right, top);
-	rb = Point2d(right, bottom);
-	vertices.clear();
-	vertices.push_back(lb);
-	vertices.push_back(lt);
-	vertices.push_back(rt);
-	vertices.push_back(rb);
-}
 
-bool Rect::collidesWith(Geometry* g) {
-	/*switch (g->type) {
+void Rect::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	switch (g->type) {
 	case (Geometry::G_LINE):
 	{
 		Line l = static_cast<Line>(*g);
-		bool lineVertexInside = collidesWith(l.vertices.at(0)) || collidesWith(l.vertices.at(1));
+		// Needs to account for collisions with all sides of rect
+		uint32_t leftSideY = l.calculateClippedY(lt.x);
+		uint32_t rightSideY = l.calculateClippedY(rt.x);
+		bool lineCrossesSides = leftSideY || rightSideY;
 
+		if (leftSideY) {
+			Point2d p = Point2d(lt.x, leftSideY);
+			collisions.push_back(p);
+		}
+		if (rightSideY) {
+			Point2d p = Point2d(rt.x, rightSideY);
+			collisions.push_back(p);
+		}
 	} break;
 	case (Geometry::G_TRI):
 	{
@@ -304,8 +443,7 @@ bool Rect::collidesWith(Geometry* g) {
 	{
 
 	} break;
-	}*/
-	return false;
+	}
 }
 
 Quad::Quad(const Quad& source) {
@@ -328,33 +466,94 @@ Quad::Quad(const Geometry& source) {
 	for (int i = 0; i < source.vertices.size(); i++) {
 		vertices.push_back(source.vertices[i]);
 	}
-};
+}
+void Quad::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+	} break;
+	case (Geometry::G_TRI):
+	{
+
+	} break;
+	case (Geometry::G_RECT):
+	{
+
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}
+}
 
 Circle::Circle(const Point2d& p_c, uint16_t p_r) : Geometry(G_CIRCLE) {
 	center = p_c;
+	vertices.push_back(center);
 	r = p_r;
-	vertices.push_back(p_c);
+	createVertexShell();
+}
+
+Circle::Circle(const Point2d& p_c, const Point2d& p_r) : Geometry(G_CIRCLE) {
+	center = p_c;
+	vertices.push_back(center);
+	r = static_cast<uint16_t>(sqrt(((p_c.x - p_r.x) * (p_c.x - p_r.x)) + ((p_c.y - p_r.y) * (p_c.y - p_r.y))));
+	createVertexShell();
 }
 
 Circle::Circle(const Circle& source) : Geometry(G_CIRCLE) {
 	center = source.center;
+	vertices.push_back(center);
 	r = source.r;
-	vertices.push_back(source.vertices[0]);
+	for (Point2d v : source.vertices) {
+		vertices.push_back(v);
+	}
 }
 
 Circle::Circle(const Geometry& source) {
-	if (source.type != G_CIRCLE && source.vertices.size() != 1)
+	if (source.type != G_CIRCLE && source.vertices.size() != Circle::SIDE_COUNT + 1) {
 		return;
-
+	}
+	
 	type = source.type;
-	center = source.vertices[0];
-	vertices.push_back(center);
-	r = 30;
+	for (Point2d v : source.vertices) {
+		vertices.push_back(v);
+	}
+	center = source.vertices.at(0);
+}
+
+void Circle::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides) {
+	switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+	} break;
+	case (Geometry::G_TRI):
+	{
+
+	} break;
+	case (Geometry::G_RECT):
+	{
+
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+
+	} break;
+	}
+}
+
+void Circle::createVertexShell() {
+	double increment = 360 / Circle::SIDE_COUNT;
+	for (int i = 0; i < Circle::SIDE_COUNT; i++) {
+		double cosx = cos(i * increment * M_PI / 180);
+		double siny = sin(i * increment * M_PI / 180);
+		Point2d v = Point2d(center.x + static_cast<int32_t>(r * cosx), center.y + static_cast<int32_t>(r * siny));
+		vertices.push_back(v);
+	}
 }
 
 
 Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
-
 	x = p_x; y = p_y;
 	direction = p_direction;
 	clampDirection();
@@ -367,6 +566,7 @@ Camera::Camera(uint32_t p_x, uint32_t p_y, float p_direction) {
 }
 
 void Camera::update() {
+	// Direction = 0 - 360, clockwise from positive x axis
 	double cosx = cos(direction * M_PI / 180);
 	double siny = sin(direction * M_PI / 180);
 	base = Point2d((uint32_t)(x - size * cosx / 2 + 0.5), (uint32_t)(y - size * siny / 2 + 0.5));
@@ -375,10 +575,20 @@ void Camera::update() {
 
 	left = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5));
 	right = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
+
+	// Maintain bounding box for collisions
+	boundingBox[0] = Point2d(static_cast<uint32_t>(x + c2C * cos((direction - (90 + theta)) * M_PI / 180) + 0.5), static_cast<uint32_t>(y + c2C * sin((direction - (90 + theta)) * M_PI / 180) + 0.5));
+	boundingBox[1] = Point2d(static_cast<uint32_t>(x + c2C * cos((direction - (90 - theta)) * M_PI / 180) + 0.5), static_cast<uint32_t>(y + c2C * sin((direction - (90 - theta)) * M_PI / 180) + 0.5));
+	boundingBox[2] = Point2d(static_cast<uint32_t>(x + c2C * cos((direction + (90 - theta)) * M_PI / 180) + 0.5), static_cast<uint32_t>(y + c2C * sin((direction + (90 - theta)) * M_PI / 180) + 0.5));
+	boundingBox[3] = Point2d(static_cast<uint32_t>(x + c2C * cos((direction + (90 + theta)) * M_PI / 180) + 0.5), static_cast<uint32_t>(y + c2C * sin((direction + (90 + theta)) * M_PI / 180) + 0.5));
+	leftSide = Line(boundingBox[0], boundingBox[1]);
+	front = Line(boundingBox[1], boundingBox[2]);
+	rightSide = Line(boundingBox[2], boundingBox[3]);
+	back = Line(boundingBox[3], boundingBox[0]);
+
 }
 
 void Camera::clampDirection() {
-
 	if (direction < 0) {
 		direction = 360.0f - (-direction - (int)(direction / -360) * 360);
 		return;
@@ -415,6 +625,20 @@ void Camera::clampPosition(Rect panel) {
 	if ((py + size / 2) > panel.rb.y) (py = (float)panel.rb.y - size / 2);
 }
 
+void Camera::clampPosition(Point2d collision, Line l) {
+	Point2d center = Point2d(x, y);
+
+	bool normalLeft = x < collision.x;
+	bool normalUp = y < collision.y;
+	if (center.displacementFrom(collision) < (size / 2)) {
+		px = (float)collision.x + (int)(!normalLeft) * size / 2 - (int)(normalLeft)*size / 2;
+		py = (float)collision.y + (int)(!normalUp) * size / 2 - (int)(normalLeft)*size / 2;
+	}
+	double m = l.calculateSlope();
+	double b = l.calculateIntercept();
+
+}
+
 void Camera::clampVelocity() {
 	float limit = 100.0f;
 	if (vx > limit)
@@ -432,4 +656,23 @@ void Camera::clampAcceleration() {
 	if (ay > limit) ay = limit;
 	if (ax < -limit) ax = -limit;
 	if (ay < -limit) ay = -limit;
+}
+
+void Camera::clampAngularAcceleration() {
+	float limit = 4000.0f;
+	if (aa > limit) aa = limit;
+	if (aa < -limit) aa = -limit;
+}
+
+Point2d Camera::findClosestBoundingVertex(const Point2d& collision) {
+	Point2d closest = Point2d(10000, 10000);
+	uint64_t distanceClosestSquared = (closest.x - collision.x) * (closest.x - collision.x) + (closest.y - collision.y) * (closest.y - collision.y);
+	for (Point2d p : boundingBox) {
+		uint64_t distancePSquared = (p.x - collision.x) * (p.x - collision.x) + (p.y - collision.y) * (p.y - collision.y);
+		if (distancePSquared < distanceClosestSquared) {
+			closest = p;
+			distanceClosestSquared = distancePSquared;
+		}
+	}
+	return closest;
 }

@@ -44,6 +44,7 @@ namespace MainWindow {
 
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
+	Line highlightLine;
 	Camera* camera;
 	std::vector<Geometry*> geometryQueue;
 	Quadtree* qt;
@@ -84,6 +85,8 @@ namespace MainWindow {
 
 	void conditionMouseCoords(Point2d& p);
 	void conditionMouseCoords(POINT& p);
+
+	bool canDrawHightlightLine();
 };
 
 enum RunState {

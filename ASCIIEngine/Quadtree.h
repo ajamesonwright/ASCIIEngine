@@ -37,11 +37,11 @@ private:
 		std::string toString(int depth);
 		void resetChildren();
 
-		bool operator==(Quadrant& const obj) const {
+		bool operator==(const Quadrant& obj) const {
 			return left == obj.left && right == obj.right && top == obj.top && bottom == obj.bottom;
 		}
 
-		bool operator>(Quadrant& const obj) const {
+		bool operator>(const Quadrant& obj) const {
 			return depth > obj.depth;
 		}
 
