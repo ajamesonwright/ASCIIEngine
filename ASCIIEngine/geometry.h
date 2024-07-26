@@ -2,6 +2,7 @@
 #define ASCIIENGINE_GEOMETRY_H_
 
 #include <algorithm>
+#include <map>
 #include <optional>
 #include <set>
 #include <stdint.h>
@@ -36,6 +37,12 @@ public:
 		return x != obj.x || y != obj.y;
 	};
 
+	bool operator < (Point2d const& obj) const {
+		if (x < obj.x) return true;
+		if (x == obj.x) return y < obj.y;
+		return false;
+	};
+
 	bool isInitialized() { return initialized; };
 	const int displacementFrom(const Point2d& p) { return (int)sqrt((int)(x - p.x) * (int)(x - p.x) + (int)(y - p.y) * (int)(y - p.y)); };
 
@@ -60,7 +67,7 @@ public:
 class Ray2d : public Point2d {
 
 public:
-	float direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
+	double direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
 
 	Ray2d() { x = 0; y = 0; direction = 0.0f; };
 	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; };
@@ -83,6 +90,7 @@ class Geometry {
 public:
 	int type;
 	std::vector<Point2d> vertices;
+	std::vector<Line> sides;
 
 	Geometry() { type = -1; };
 	Geometry(int p_type) { type = p_type; };
@@ -112,6 +120,7 @@ protected:
 	int comparePointsByCoordinate(CompareType compareType, const std::vector<Point2d>* v = nullptr, const Point2d* p1 = nullptr, const Point2d* p2 = nullptr, const int begin = -1, const int end = -1);
 	std::vector<float> calculateSlopes(const std::vector<Point2d> v_g);
 	void sortBySlope(std::vector<Point2d> &vertices, const std::vector<float> slopes);
+	void createVertexShell();
 private:
 	int comparePointVectorByCoordinate(CompareType compare_type, const std::vector<Point2d>* v, const int begin = -1, const int end = -1);
 	int comparePointPairByCoordinate(CompareType compare_type, const Point2d* p1, const Point2d* p2);
@@ -134,18 +143,20 @@ public:
 	void checkCollisionWith(Rect r, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 	void checkCollisionWith(Camera* c, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
 	void findIntersection(const Line& l, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+	Point2d findClosestPointOnLine(const Point2d& p);
 	double calculateSlope() { return static_cast<double>(getDy()) / getDx(); };
 	double calculateIntercept();
 	double calculateLength();
 	double calculateAngle(Line& l);
+	static double calculateDotProduct(Line& l1, Line& l2);
 	uint32_t calculateClippedY(uint32_t bound);
 	uint32_t calculateClippedX(uint32_t bound);
 	bool isInitialized() { return initialized; }
+	int32_t getDx() { return vertices.at(1).x - vertices.at(0).x; };
+	int32_t getDy() { return vertices.at(1).y - vertices.at(0).y; };
 
 private:
 	bool initialized = false;
-	int32_t getDx() { return vertices.at(1).x - vertices.at(0).x; };
-	int32_t getDy() { return vertices.at(1).y - vertices.at(0).y; };
 	bool hasOverlappingDomain(Line l);
 	bool hasOverlappingRange(Line l);
 	void findIntersection(Line l, Point2d& intersection);
@@ -170,6 +181,7 @@ class Rect : public Geometry {
 public:
 	Point2d lt, rb;
 	Point2d lb, rt;
+	Line sides[4];
 
 	Rect() : Geometry(G_RECT) { lt = Point2d(); rb = Point2d(); lb = Point2d(); rt = Point2d(); vertices.clear(); };
 	Rect(const Rect& source);
@@ -220,6 +232,8 @@ public:
 class Circle : public Geometry {
 
 public:
+	static const uint8_t SIDE_COUNT = 12;
+
 	Point2d center;
 	uint16_t r = 0;
 
@@ -231,9 +245,9 @@ public:
 
 	bool checkCollisionWith(const Point2d& p) { return center.displacementFrom(p) <= r; }
 	void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+
 private:
 	void createVertexShell();
-	static const uint8_t SIDE_COUNT = 12;
 };
 
 class Camera : public Ray2d {
@@ -242,7 +256,7 @@ class Camera : public Ray2d {
 public:
 	uint8_t size; // Length from center point to base or tip
 	int colour = 0xffffff;
-	float px, py, vx, vy, ax, ay, va, aa;
+	double px, py, vx, vy, ax, ay, va, aa;
 	uint16_t turn_speed = 10000, move_speed = 1000;
 	Point2d left, right, tip, base;
 	Line leftSide, rightSide, front, back;
@@ -256,13 +270,16 @@ public:
 
 	void setSize(uint8_t p_size) { size = p_size; };
 	void clampDirection();
-	void clampPosition(Point2d p, Geometry* g);
 	void clampPosition(Rect panel);
-	void clampPosition(Point2d collision, Line l);
+	void clampPosition(const Line& l, const Point2d collision);
 	void clampVelocity();
 	void clampAcceleration();
 	void clampAngularAcceleration();
-	Point2d findClosestBoundingVertex(const Point2d& collision);
+
+	void checkCollisionWith(Geometry* g, std::map<Point2d, std::vector<Line>>& collisions);
+	void findIntersection(Line& l, std::map<Point2d, std::vector<Line>>& collisions);
+	/*void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
+	void findIntersection(Line& l, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);*/
 
 private:
 	uint8_t xOffset = 5;

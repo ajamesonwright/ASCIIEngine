@@ -1,5 +1,11 @@
 #include "geometry.h"
 
+void Geometry::createVertexShell() {
+	for (int i = 0; i < vertices.size(); i++) {
+		sides.push_back(Line(vertices.at(i), vertices.at(i + 1 == vertices.size() ? 0 : i + 1)));
+	}
+}
+
 /*
 * Take in a binary mask compare type and perform the associated comparison of geometry coordinates.
 * Returns -1 indicating that the coordinate specified in the compare type for the first point is the same as that of the second
@@ -178,6 +184,14 @@ void Line::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std
 		Rect r = static_cast<Rect>(*g);
 		checkCollisionWith(r, collisions, interferingSides);
 	} break;
+	case (Geometry::G_QUAD):
+	{
+		Quad q = static_cast<Quad>(*g);
+		Line sides[4] = { Line(q.vertices.at(0), q.vertices.at(1)), Line(q.vertices.at(1), q.vertices.at(2)), Line(q.vertices.at(2), q.vertices.at(3)), Line(q.vertices.at(3), q.vertices.at(0)) };
+		for (Line l : sides) {
+			findIntersection(l, collisions, interferingSides);
+		}
+	} break;
 	case (Geometry::G_CIRCLE):
 	{
 
@@ -208,6 +222,28 @@ void Line::findIntersection(const Line& l, std::vector<Point2d>& collisions, std
 	}
 }
 
+Point2d Line::findClosestPointOnLine(const Point2d& p) {
+	Line l = Line(vertices.at(0), p);
+	double ptox1 = (double)p.x - vertices.at(0).x;
+	double ptoy1 = (double)p.y - vertices.at(0).y;
+
+	double dotProduct = ptox1 * getDx() + ptoy1 * getDy();
+	double lengthSquared = getDy() * getDy() + getDx() * getDx();
+	double param = (lengthSquared != 0) ? (dotProduct / lengthSquared) : -1;
+
+	Point2d closestPoint;
+	if (param < 0) {
+		closestPoint = vertices.at(0);
+	} else if (param > 1) {
+		closestPoint = vertices.at(1);
+	} else {
+		closestPoint.x = vertices.at(0).x + param * getDx();
+		closestPoint.y = vertices.at(0).y + param * getDy();
+	}
+
+	return closestPoint;
+}
+
 double Line::calculateIntercept() {
 	return vertices.at(0).y - calculateSlope() * vertices.at(0).x;
 }
@@ -217,7 +253,12 @@ double Line::calculateLength() {
 }
 
 double Line::calculateAngle(Line& l) {
+	// Produces a value in the range (0,180]. If the value of the swept angle from positive to positive is >=180, val = 360 - val
 	return acos((getDx() * l.getDx() + getDy() * l.getDy()) / (calculateLength() * l.calculateLength()));
+}
+
+double Line::calculateDotProduct(Line& l1, Line& l2) {
+	return l1.getDx() * l2.getDx() + l1.getDy() * l2.getDy();
 }
 
 uint32_t Line::calculateClippedY(uint32_t bound) {
@@ -350,6 +391,10 @@ void Tri::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std:
 	{
 
 	} break;
+	case (Geometry::G_QUAD):
+	{
+
+	} break;
 	case (Geometry::G_CIRCLE):
 	{
 
@@ -439,6 +484,10 @@ void Rect::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std
 	{
 
 	} break;
+	case (Geometry::G_QUAD):
+	{
+
+	} break;
 	case (Geometry::G_CIRCLE):
 	{
 
@@ -480,6 +529,10 @@ void Quad::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std
 	{
 
 	} break;
+	case (Geometry::G_QUAD):
+	{
+
+	} break;
 	case (Geometry::G_CIRCLE):
 	{
 
@@ -489,22 +542,22 @@ void Quad::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std
 
 Circle::Circle(const Point2d& p_c, uint16_t p_r) : Geometry(G_CIRCLE) {
 	center = p_c;
-	vertices.push_back(center);
 	r = p_r;
+	vertices.push_back(center);
 	createVertexShell();
 }
 
 Circle::Circle(const Point2d& p_c, const Point2d& p_r) : Geometry(G_CIRCLE) {
 	center = p_c;
-	vertices.push_back(center);
 	r = static_cast<uint16_t>(sqrt(((p_c.x - p_r.x) * (p_c.x - p_r.x)) + ((p_c.y - p_r.y) * (p_c.y - p_r.y))));
+	vertices.push_back(center);
 	createVertexShell();
 }
 
 Circle::Circle(const Circle& source) : Geometry(G_CIRCLE) {
 	center = source.center;
-	vertices.push_back(center);
 	r = source.r;
+	vertices.push_back(center);
 	for (Point2d v : source.vertices) {
 		vertices.push_back(v);
 	}
@@ -532,6 +585,10 @@ void Circle::checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, s
 
 	} break;
 	case (Geometry::G_RECT):
+	{
+
+	} break;
+	case (Geometry::G_QUAD):
 	{
 
 	} break;
@@ -596,28 +653,6 @@ void Camera::clampDirection() {
 	direction -= (int)(direction / 360) * 360.0f;
 }
 
-void Camera::clampPosition(Point2d p, Geometry* g) {
-	switch (g->type) 		{
-	case (Geometry::G_LINE):
-	{
-	} break;
-	case (Geometry::G_TRI):
-	{
-
-	} break;
-	case (Geometry::G_RECT):
-	{
-		//if (p.x > g->vertices)
-
-	} break;
-	case (Geometry::G_CIRCLE):
-	{
-
-	} break;
-	}
-	
-}
-
 void Camera::clampPosition(Rect panel) {
 	if ((px - size / 2) < panel.lt.x) (px = (float)panel.lt.x + size / 2);
 	if ((py - size / 2) < panel.lt.y) (py = (float)panel.lt.y + size / 2);
@@ -625,18 +660,18 @@ void Camera::clampPosition(Rect panel) {
 	if ((py + size / 2) > panel.rb.y) (py = (float)panel.rb.y - size / 2);
 }
 
-void Camera::clampPosition(Point2d collision, Line l) {
+void Camera::clampPosition(const Line& l, const Point2d collision) {
 	Point2d center = Point2d(x, y);
-
-	bool normalLeft = x < collision.x;
-	bool normalUp = y < collision.y;
-	if (center.displacementFrom(collision) < (size / 2)) {
-		px = (float)collision.x + (int)(!normalLeft) * size / 2 - (int)(normalLeft)*size / 2;
-		py = (float)collision.y + (int)(!normalUp) * size / 2 - (int)(normalLeft)*size / 2;
+	Line normal = Line(collision, center);
+	Line xAxis = Line(Point2d(0, 0), Point2d(1, 0));
+	float alpha = xAxis.calculateAngle(normal);
+	if (normal.calculateLength() < (size / 2) + 2) {
+		px = collision.x + (size / 2 + 2) * (normal.getDx() == 0 ? 0 : normal.getDx() / abs(normal.getDx())); // should include something that corrects for direction
+		py = collision.y + (size / 2 + 2) * (normal.getDy() == 0 ? 0 : normal.getDy() / abs(normal.getDy()));
 	}
-	double m = l.calculateSlope();
-	double b = l.calculateIntercept();
-
+	
+	x = (uint32_t)(px);
+	y = (uint32_t)(py);
 }
 
 void Camera::clampVelocity() {
@@ -664,15 +699,63 @@ void Camera::clampAngularAcceleration() {
 	if (aa < -limit) aa = -limit;
 }
 
-Point2d Camera::findClosestBoundingVertex(const Point2d& collision) {
-	Point2d closest = Point2d(10000, 10000);
-	uint64_t distanceClosestSquared = (closest.x - collision.x) * (closest.x - collision.x) + (closest.y - collision.y) * (closest.y - collision.y);
-	for (Point2d p : boundingBox) {
-		uint64_t distancePSquared = (p.x - collision.x) * (p.x - collision.x) + (p.y - collision.y) * (p.y - collision.y);
-		if (distancePSquared < distanceClosestSquared) {
-			closest = p;
-			distanceClosestSquared = distancePSquared;
+void Camera::checkCollisionWith(Geometry* g, std::map<Point2d, std::vector<Line>>& collisions) {
+	switch (g->type) {
+	case (Geometry::G_LINE):
+	{
+		Line l = static_cast<Line>(*g);
+		findIntersection(l, collisions);
+	} break;
+	case (Geometry::G_TRI):
+	{
+		Tri t = static_cast<Tri>(*g);
+		Line sides[3] = { Line(t.vertices.at(0), t.vertices.at(1)), Line(t.vertices.at(1), t.vertices.at(2)), Line(t.vertices.at(2), t.vertices.at(0)) };
+		for (Line l : sides) {
+			findIntersection(l, collisions);
+		}
+	} break;
+	case (Geometry::G_RECT):
+	{
+		Rect r = static_cast<Rect>(*g);
+		Line sides[4] = { Line(r.lb, r.lt), Line(r.lt, r.rt), Line(r.rt, r.rb), Line(r.rb, r.lb) };
+		for (Line l : sides) {
+			findIntersection(l, collisions);
+		}
+	} break;
+	case (Geometry::G_QUAD):
+	{
+		Quad q = static_cast<Quad>(*g);
+		Line sides[4] = { Line(q.vertices.at(0), q.vertices.at(1)), Line(q.vertices.at(1), q.vertices.at(2)), Line(q.vertices.at(2), q.vertices.at(3)), Line(q.vertices.at(3), q.vertices.at(0)) };
+		for (Line l : sides) {
+			findIntersection(l, collisions);
+		}
+	} break;
+	case (Geometry::G_CIRCLE):
+	{
+		Circle c = static_cast<Circle>(*g);
+
+		Line sides[Circle::SIDE_COUNT];
+		for (int i = 1; i < Circle::SIDE_COUNT; i++) {
+			sides[i] = Line(c.vertices.at(i), c.vertices.at(i + 1 == Circle::SIDE_COUNT ? 1 : i + 1));
+		}
+		for (Line l : sides) {
+			findIntersection(l, collisions);
+		}
+	} break;
+	}
+}
+
+void Camera::findIntersection(Line& l, std::map<Point2d, std::vector<Line>>& collisions) {
+	Point2d center = Point2d(x, y);
+	Point2d p = l.findClosestPointOnLine(center);
+	if (p.displacementFrom(center) <= (size / 2)) {
+		auto it = collisions.find(p);
+
+		if (it != collisions.end()) {
+			it->second.push_back(l);
+		} else {
+			std::vector<Line> interferingSides = { l };
+			collisions.insert({ p, interferingSides });
 		}
 	}
-	return closest;
 }

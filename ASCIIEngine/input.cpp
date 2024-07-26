@@ -32,8 +32,10 @@ void Input::setInput(MSG* msg, bool is_held) {
 bool Input::getInput(WPARAM wp) {
 	int code = vkToKey(wp);
 
-	if (code)
+	if (code) {
 		return input_state[code].held;
+	}
+	return false;
 }
 
 bool Input::getInput(int key_code) {

@@ -62,27 +62,27 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 		case (0x4C):
 		{
 			// 'L'
-			MW::setDrawMode(DrawMode::D_LINE);
+			//MW::setDrawMode(DrawMode::D_LINE);
 		} break;
 		case (0x54):
 		{
 			// 'T'
-			MW::setDrawMode(DrawMode::D_TRI);
+			//MW::setDrawMode(DrawMode::D_TRI);
 		} break;
 		case (0x52):
 		{
 			// 'R'
-			MW::setDrawMode(DrawMode::D_RECT);
+			//MW::setDrawMode(DrawMode::D_RECT);
 		} break;
 		case (0x51):
 		{
 			// 'Q'
-			MW::setDrawMode(DrawMode::D_QUAD);
+			//MW::setDrawMode(DrawMode::D_QUAD);
 		} break;
 		case (0x43):
 		{
 			// 'C'
-			MW::setDrawMode(DrawMode::D_CIRCLE);
+			//MW::setDrawMode(DrawMode::D_CIRCLE);
 		} break;
 		case (VK_ESCAPE):
 		{
@@ -216,13 +216,6 @@ LRESULT CALLBACK WndProc(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_
 					g = rect;
 				}
 				}
-				//Rect* rect = new Rect(MW::highlightLine.vertices.at(0), MW::highlightLine.vertices.at(1));
-
-				/*Debug::DebugMessage dbg(MAIN_WINDOW_CLASS, GEO_QUEUE_MOD);
-				dbg.setMsg(&MW::event_message);
-				dbg.setPanelId(MW::current_panel_);
-				dbg.setDrawMode(1);
-				dbg.setGeometry(rect);*/
 				dbg.setGeometry(g);
 				dbg.Print();
 
@@ -484,7 +477,6 @@ int MainWindow::getCursorFocus(Point2d p) {
 
 void MainWindow::addGeometry(Geometry* g) {
 
-	// We will want to clip the geometry before adding it to the queue, otherwise we have to clip it every frame
 	MW::geometryQueue.push_back(g);
 	MW::qt->addGeometry(g);
 }
@@ -506,8 +498,8 @@ void MainWindow::simulateFrame(float dt) {
 	MW::camera->vy = (MW::camera->vy + MW::camera->ay * dt) * 0.90f;
 	MW::camera->clampVelocity();
 	// Incremental change in position
-	float dPx = MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
-	float dPy = MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
+	double dPx = MW::camera->vx * dt + MW::camera->ax * dt * dt * 0.5f;
+	double dPy = MW::camera->vy * dt + MW::camera->ay * dt * dt * 0.5f;
 
 	// Angular acceleration
 	MW::camera->aa = MW::camera->aa * 0.70f;
@@ -515,33 +507,45 @@ void MainWindow::simulateFrame(float dt) {
 	// Angular velocity
 	MW::camera->va = (MW::camera->va + MW::camera->aa * dt) * 0.90f;
 	// Incremental change in direction
-	float dTheta = MW::camera->va * dt;
+	double dTheta = MW::camera->va * dt;
 
 	bool collision = false;
+	Point2d center = Point2d(MW::camera->x, MW::camera->y);
 	Line xAxis = Line(Point2d(0, 0), Point2d(1, 0));
 	for (int i = 0; i < MW::geometryQueue.size(); i++) {
-		std::vector<Point2d> collisions;
-		std::vector<Line> interferingSides;
-		MW::camera->leftSide.checkCollisionWith(MW::geometryQueue[i], collisions, interferingSides);
-		MW::camera->rightSide.checkCollisionWith(MW::geometryQueue[i], collisions, interferingSides);
+		std::map<Point2d, std::vector<Line>> collisions;
+		MW::camera->checkCollisionWith(geometryQueue[i], collisions);
 
 		if (!collisions.empty()) {
 			collision = true;
 			// Determine normal of each collision and adjust position of camera to remove collision
-			for (Point2d c : collisions) {
-				Line side = interferingSides.at(0);
-				//MW::camera->clampPosition(c, side);
-				//Point2d closest = MW::camera->findClosestBoundingVertex(c);
-				float angleOfInterferingSideToXAxis = xAxis.calculateAngle(interferingSides.at(0));
-				float cosx = cos(angleOfInterferingSideToXAxis);
-				float siny = sin(angleOfInterferingSideToXAxis);
+			int count = 0;
+			for (auto pair : collisions) {
+				count++;
+				Point2d c = pair.first;
+				Line normal = Line(c, center);
+				for (auto side : pair.second) {
+					Line testLine = Line(side.vertices.at(1), side.vertices.at(0));
+					if (abs(normal.calculateAngle(side) * 180 / M_PI - 90) > 3) {
+						continue;
+					}
 
-				if ((c.x - MW::camera->x) * MW::camera->ax > 0) {
-					dPx *= cosx;
-				}
-				if ((c.y - MW::camera->y) * MW::camera->ay > 0) {
-					dPy *= siny;
+					double angleOfXAxisToSide = xAxis.calculateAngle(side);
+					double alpha = angleOfXAxisToSide > 90 ? (180 - angleOfXAxisToSide) : angleOfXAxisToSide;
+					// Calculate magnitude of current change in position (analogous to speed)
+					double totalVelocity = sqrt(dPx * dPx + dPy * dPy);
+					double angleOfMotionToSide = acos((dPx * side.getDx() + dPy * side.getDy()) / (totalVelocity * side.calculateLength()));
+					double gamma = angleOfMotionToSide > 90 ? (180 - angleOfMotionToSide) : angleOfMotionToSide;
+					// Calculate the new velocity produced by sliding along the side of the geometry
+					double newVelocity = totalVelocity * cos(gamma);
 
+					// Calculate the x and y components of that 'velocity'
+					if (normal.getDx() * MW::camera->ax < 0) {
+						dPx = newVelocity * cos(alpha);
+					}
+					if (normal.getDy() *MW::camera->ay < 0) {
+						dPy = newVelocity * sin(alpha);
+					}
 				}
 			}
 		}
@@ -551,7 +555,7 @@ void MainWindow::simulateFrame(float dt) {
 	} else {
 		MW::camera->colour = 0xffffff;
 	}
-		
+
 	// p = p + v*t + 1/2*a*t^2
 	MW::camera->px = MW::camera->px + dPx;
 	MW::camera->py = MW::camera->py + dPy;
