@@ -7,12 +7,11 @@
 #include "geometry.h"
 #include "debug.h"
 
-class Renderer
-{
+class Renderer {
 public:
 	bool instanced = false;
 
-	enum panel {
+	enum Panel {
 		TOP_DOWN,
 		FIRST_PERSON,
 		BACKGROUND,
@@ -20,10 +19,23 @@ public:
 		NUM_PANELS,
 	};
 
+	enum Dimension {
+		HORIZONTAL,
+		VERTICAL
+	};
+
+	enum ClipType {
+		LEFT = 0b1,
+		RIGHT = 0b10,
+		TOP = 0b100,
+		BOTTOM = 0b1000
+	};
+
 	struct DrawArea {
-		// Indexed from left-bottom
 		uint32_t xPos, yPos;
 		uint32_t width, height;
+		uint16_t screensWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+		uint16_t screensHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
 		Rect panels[NUM_PANELS];
 		void* data;
 		bool update;
@@ -67,38 +79,41 @@ public:
 	const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
-	DrawArea* GetDrawArea();
-	void SetDrawArea(Rect* rect, uint8_t border_width);
-	void UpdateRenderArea(Point2d p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
-	void UpdateRenderArea(Ray2d r, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void UpdateRenderArea(Geometry g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
-	void UpdateRenderArea(Line l, int panel, uint32_t colour = 0x777777, bool valid = false);
-	void RenderLineLow(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void RenderLineHigh(Point2d p0, Point2d p1, int panel, uint32_t colour = 0x666666, bool valid = false);
-	void UpdateRenderArea(Tri t, int panel, uint32_t colour = 0x555555, bool valid = false);
-	void UpdateRenderArea(Rect r, int panel, uint32_t colour = 0x333333, bool valid = false);
-	void UpdateGeometry();
-	void DrawRenderArea(HDC hdc);
-	void ClearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
-	int GetFocus();
-	void SetFocus(int panel);
-	int GetFocusLock();
-	void SetFocusLock(int panel);
-	void CleanUp();
+	DrawArea* getDrawArea();
+	Rect getDrawArea(int panelId);
+	void setDrawArea(Rect* rect, uint8_t border_width);
+	void clampDimension(uint32_t& dim, Dimension d, int panel = -1);
+	uint16_t validate(Geometry* g, uint32_t bounds[], int panel = -1);
+	Line clipLine(const Line& l, const uint32_t bounds[], const uint16_t& clipType, int panel);
+	Rect clipRect(const Rect& r, const uint32_t bounds[], const uint16_t& clipType, int panel);
+	void updateRenderArea(const Point2d& p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
+	void updateRenderArea(const Camera& c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void updateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
+	void updateRenderArea(const Line& l, int panel, uint32_t colour = 0x777777, bool valid = false);
+	void renderLineLow(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void renderLineHigh(const Point2d& p0, const Point2d& p1, int panel, uint32_t colour = 0x666666, bool valid = false);
+	void updateRenderArea(const Tri& t, int panel, uint32_t colour = 0x555555, bool valid = false);
+	void updateRenderArea(const Rect& r, int panel, uint32_t colour = 0x333333, bool valid = false);
+	void updateRenderArea(const Circle& c, int panel, uint32_t colour = 0xAAAAAA, bool valid = false);
+	void drawRenderArea(HDC hdc);
+	void clearRenderArea(bool force = false, int panel = -1, uint32_t colour = UINT32_MAX);
+	int getFocus();
+	void setFocus(int panel);
+	int getFocusLock();
+	void setFocusLock(int panel);
+	void cleanUp();
 
-	void* GetMemoryLocation(int panel, Point2d p);
+	void* getMemoryLocation(int panel, Point2d p);
 
 private:
 	DrawArea draw_area_;
-	uint8_t fov; // field of view of FIRST_PERSON panel in degrees
 
-	Point2d Clamp(Point2d &p, Point2d max);
-	bool Validate(Point2d p, int panel = -1);
-	bool Validate(Ray2d r, int panel = -1);
-	bool Validate(Line l, int panel = -1);
-	bool Validate(Rect rect, int panel = -1);
-	void DrawLine(Point2d p1, Point2d p2, int weight, uint32_t colour);
-	Line ClipLine(Line l);
+	uint16_t validate(const Point2d& p, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Line& l, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Rect& rect, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Circle& c, uint32_t bounds[], int panel = -1);
+	uint16_t validate(const Camera& c, uint32_t bounds[], int panel = -1);
+	void clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper, const uint32_t screenDim);
 };
 
 #endif

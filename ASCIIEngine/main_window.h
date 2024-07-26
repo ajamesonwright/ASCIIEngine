@@ -7,17 +7,21 @@
 #include <vector>
 #include "geometry.h"
 #include "input.h"
+#include "quadtree.h"
 
 // shorten name, make it easier to use
-#define MW main_window
+#define MW MainWindow
 
 class Renderer;
 
-namespace main_window {
+namespace MainWindow {
 
 	// execution state
 	int run_state_;
 	int draw_mode_;
+
+	// draw shape outline flag
+	int outlineType = 0;
 
 	// current mouseover panel
 	int current_panel_ = -1;
@@ -27,7 +31,7 @@ namespace main_window {
 
 	// Window/exe properties
 	const uint16_t window_starting_height_ = 600;
-	const uint16_t window_starting_width_ = 1620;
+	const uint16_t window_starting_width_ = 1920;
 	const uint8_t window_starting_x_ = 100;
 	const uint8_t window_starting_y_ = 200;
 	const uint8_t border_width_ = 20;
@@ -40,51 +44,57 @@ namespace main_window {
 
 	Rect main_rect, draw_rect;
 	Point2d geo_start, geo_end;
-	Ray2d camera;
-	std::vector<Geometry*> geometry_queue;
+	Line highlightLine;
+	Camera* camera;
+	std::vector<Geometry*> geometryQueue;
+	Quadtree* qt;
 
 	MSG event_message;
 
-	Renderer* GetRenderer();
-	Rect* GetDrawAreaPanel(int panel);
+	Renderer* getRenderer();
+	Rect* getDrawAreaPanel(int panel);
 
-	bool GetRunningState();
-	void SetRunningState(int p_run_state);
-	void SetDrawMode(int p_draw_mode);
-	int GetCursorFocus(Point2d p);
+	bool getRunningState();
+	void setRunningState(int p_run_state);
+	void setDrawMode(int p_draw_mode);
+	int getCursorFocus(Point2d p);
 
-	void SimulateFrame(float s_per_frame);
+	void addGeometry(Geometry* g);
+	void removeGeometry(Geometry* g);
+	void simulateFrame(float s_per_frame);
 
-	void* FindMemoryHandle(Geometry* g);
+	void* findMemoryHandle(Geometry* g);
 
-	void SetWindowHeight(uint16_t p_height);
-	uint16_t GetWindowHeight();
-	void SetWindowWidth(uint16_t p_width);
-	uint16_t GetWindowWidth();
-	void SetWindowOffsetX(uint16_t p_offset);
-	uint16_t GetWindowOffsetX();
-	void SetWindowOffsetY(uint16_t p_offset);
-	uint16_t GetWindowOffsetY();
-	void SetMTCOffsetX(uint8_t p_offset_x);
-	uint8_t GetMTCOffsetX();
-	void SetMTCOffsetY(uint8_t p_offset_y);
-	uint8_t GetMTCOffsetY();
+	void setWindowHeight(uint16_t p_height);
+	uint16_t getWindowHeight();
+	void setWindowWidth(uint16_t p_width);
+	uint16_t getWindowWidth();
+	void setWindowOffsetX(uint16_t p_offset);
+	uint16_t getWindowOffsetX();
+	void setWindowOffsetY(uint16_t p_offset);
+	uint16_t getWindowOffsetY();
+	void setMTCOffsetX(uint8_t p_offset_x);
+	uint8_t getMTCOffsetX();
+	void setMTCOffsetY(uint8_t p_offset_y);
+	uint8_t getMTCOffsetY();
 
-	Rect& GetMainWindowRect();
-	void SetMainWindowRect(HWND hwnd, Rect* rect);
-	Rect& GetDrawRect();
-	void SetDrawRect(HWND hwnd, Rect* rect);
+	Rect& getMainWindowRect();
+	void setMainWindowRect(HWND hwnd, Rect* rect);
+	Rect& getDrawRect();
+	void setDrawRect(HWND hwnd, Rect* rect);
 
-	void ConditionMouseCoords(Point2d& p);
-	void ConditionMouseCoords(POINT& p);
+	void conditionMouseCoords(Point2d& p);
+	void conditionMouseCoords(POINT& p);
+
+	bool canDrawHightlightLine();
 };
 
-enum run_state {
+enum RunState {
 	STOPPED,
 	RUNNING,
 };
 
-enum draw_mode {
+enum DrawMode {
 	D_LINE,
 	D_TRI,
 	D_RECT,

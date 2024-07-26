@@ -1,21 +1,19 @@
 #include <cstdint>
 #include <wtypes.h>
-#include "debug.h"
+#include "Debug.h"
 #include <vector>
-#include "geometry.h"
+#include "Geometry.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 #ifndef ASCIIENGINE_INPUT_H_
 #define ASCIIENGINE_INPUT_H_
 
-enum keys {
+enum Keys {
 	ML_DOWN,
 	W_DOWN,
 	A_DOWN,
 	S_DOWN,
 	D_DOWN,
-	//END_DOWN,
-	//ESCAPE_DOWN,
 
 	KEY_SIZE,
 };
@@ -28,22 +26,22 @@ class Input {
 	};
 
 public:
-	Input(Ray2d* p_camera) {
+	Input(Camera* p_camera) {
 		camera = p_camera;
 	}
 
 	ButtonState input_state[KEY_SIZE];
 
-	void ClearInput(bool clear_held = true, bool clear_update = true, int key = -1);
-	void SetInput(MSG* msg, bool is_held);
-	bool GetInput(WPARAM wp);
-	bool GetInput(int key_code);
-	void HandleInput(MSG* msg, float ms_per_frame);
+	void clearInput(bool clear_held = true, bool clear_update = true, int key = -1);
+	void setInput(MSG* msg, bool is_held);
+	bool getInput(WPARAM wp);
+	bool getInput(int key_code);
+	void handleInput(MSG* msg, float ms_per_frame);
 
 private:
-	Ray2d* camera;
-	int VkToKey(WPARAM wp);
-	void HandleInput(int key_code);
+	Camera* camera;
+	int vkToKey(WPARAM wp);
+	void handleInput(int key_code);
 };
 
 #endif

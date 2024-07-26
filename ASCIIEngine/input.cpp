@@ -1,6 +1,6 @@
 #include "input.h"
 
-void Input::ClearInput(bool clear_held, bool clear_update, int key) {
+void Input::clearInput(bool clear_held, bool clear_update, int key) {
 	int range_begin = 0;
 	int range_end = KEY_SIZE;
 	if (key != -1) {
@@ -16,44 +16,59 @@ void Input::ClearInput(bool clear_held, bool clear_update, int key) {
 	};
 }
 
-void Input::SetInput(MSG* msg, bool is_held) {
-	int code = VkToKey(msg->wParam);
+void Input::setInput(MSG* msg, bool is_held) {
+	int code = vkToKey(msg->wParam);
 
 	if (code) {
-		debug::PrintDebugMsg(calling_class::INPUT_CLASS, debug_type::INPUT_DETECTED, msg, -1, -1, nullptr, -1);
+		Debug::DebugMessage dbg = Debug::DebugMessage(CallingClasses::INPUT_CLASS, DebugTypes::INPUT_DETECTED);
+		dbg.setMsg(msg);
+		Debug::Print(&dbg);
+
 		input_state[code].update = is_held != input_state[code].held;
 		input_state[code].held = is_held;
 	}
 }
 
-bool Input::GetInput(WPARAM wp) {
-	int code = VkToKey(wp);
+bool Input::getInput(WPARAM wp) {
+	int code = vkToKey(wp);
 
-	if (code)
+	if (code) {
 		return input_state[code].held;
+	}
+	return false;
 }
 
-bool Input::GetInput(int key_code) {
+bool Input::getInput(int key_code) {
 	return input_state[key_code].held;
 }
 
-void Input::HandleInput(MSG* msg, float dt) {
-	debug::PrintDebugMsg(calling_class::INPUT_CLASS, debug_type::INPUT_STATUS, msg, -1, -1, nullptr, -1, -1.0f, this, nullptr);
-	if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
-	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);
-	camera->ClampDirection();
+void Input::handleInput(MSG* msg, float dt) {
+	Debug::DebugMessage dbg = Debug::DebugMessage(CallingClasses::INPUT_CLASS, DebugTypes::INPUT_STATUS);
+	Debug::Print(&dbg);
+	/*if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
+	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);*/
+
+	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
 
 	if (input_state[W_DOWN].held) {
-		camera->ay -= cos((camera->direction + 90) * M_PI / 180.0f) * camera->move_speed;
-		camera->ax += sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+		camera->ay -= (float)cosy;
+		camera->ax += (float)sinx;
 	}
 	if (input_state[S_DOWN].held) {
-		camera->ay += cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
-		camera->ax -= sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+		camera->ay += (float)cosy;
+		camera->ax -= (float)sinx;
 	}
+	if (input_state[A_DOWN].held) {
+		camera->aa -= (float)camera->turn_speed;// * dt;
+	}
+	if (input_state[D_DOWN].held) {
+		camera->aa += (float)camera->turn_speed;// *dt;
+	}
+	//camera->clampDirection();
 }
 
-int Input::VkToKey(WPARAM w_param) {
+int Input::vkToKey(WPARAM w_param) {
 	uint32_t key_code = (uint32_t)w_param;
 	switch (key_code) {
 	case 0x57: // W
@@ -64,6 +79,8 @@ int Input::VkToKey(WPARAM w_param) {
 		return S_DOWN;
 	case 0x44: // D
 		return D_DOWN;
+	case 0x80:
+		return ML_DOWN;
 	default:
 		return 0;
 	}
