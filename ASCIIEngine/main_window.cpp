@@ -358,13 +358,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		MW::input_->handleInput(&MW::event_message, dt);
 		MW::simulateFrame(dt);
 
-		MW::getRenderer()->clearRenderArea(true);
+		MW::renderer_->clearRenderArea(true);
 		// Draw highlight line for click and hold
 		if (MW::canDrawHightlightLine()) {
 			// Cast to custom point type and clamp to window dimensions
 			Point2d end = MW::event_message.pt;
-			MW::getRenderer()->clampDimension(end.x, Renderer::Dimension::HORIZONTAL, Renderer::BACKGROUND);
-			MW::getRenderer()->clampDimension(end.y, Renderer::Dimension::VERTICAL, Renderer::BACKGROUND);
+			MW::renderer_->clampDimension(end.x, Renderer::Dimension::HORIZONTAL, Renderer::BACKGROUND);
+			MW::renderer_->clampDimension(end.y, Renderer::Dimension::VERTICAL, Renderer::BACKGROUND);
 			MW::highlightLine = Line(MW::geo_start, end);
 
 			std::vector<Point2d> collisions;
@@ -394,14 +394,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 				// Clip to the geometry closest to start of line
 				MW::highlightLine = Line(MW::geo_start, Point2d(collisions.at(0)));
 			}
-			MW::getRenderer()->updateRenderArea(MW::highlightLine, Renderer::TOP_DOWN, colour, false);
+			MW::renderer_->updateRenderArea(MW::highlightLine, Renderer::TOP_DOWN, colour, false);
 
 			if (MW::outlineType) {
-				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(MW::geo_start.x, end.y)), Renderer::TOP_DOWN, 0xff00, false);
-				MW::getRenderer()->updateRenderArea(Line(MW::geo_start, Point2d(end.x, MW::geo_start.y)), Renderer::TOP_DOWN, 0xff00, false);
+				MW::renderer_->updateRenderArea(Line(MW::geo_start, Point2d(MW::geo_start.x, end.y)), Renderer::TOP_DOWN, 0xff00, false);
+				MW::renderer_->updateRenderArea(Line(MW::geo_start, Point2d(end.x, MW::geo_start.y)), Renderer::TOP_DOWN, 0xff00, false);
 
-				MW::getRenderer()->updateRenderArea(Line(Point2d(MW::geo_start.x, end.y), end), Renderer::TOP_DOWN, 0xff00, false);
-				MW::getRenderer()->updateRenderArea(Line(Point2d(end.x, MW::geo_start.y), end), Renderer::TOP_DOWN, 0xff00, false);
+				MW::renderer_->updateRenderArea(Line(Point2d(MW::geo_start.x, end.y), end), Renderer::TOP_DOWN, 0xff00, false);
+				MW::renderer_->updateRenderArea(Line(Point2d(end.x, MW::geo_start.y), end), Renderer::TOP_DOWN, 0xff00, false);
 			}
 		}
 		// Draw geometry queue from oldest to newest
@@ -414,8 +414,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		for (int i = 0; i < grid->size(); i++) {
 			MW::getRenderer()->updateRenderArea(grid->at(i), Renderer::TOP_DOWN, 0xff0000, true);
 		}
+
+		// Draw ASCII chars in FIRST_PERSON panel
+		// just draw the same char for now to test
+		MW::renderer_->updateRenderArea();
+
 		// Draw updated RenderArea to screen
-		MW::getRenderer()->drawRenderArea(hdc);
+		MW::renderer_->drawRenderArea(hdc);
 
 		QueryPerformanceCounter(&frame_end_time);
 		dt = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart) / frame_update_frequency;

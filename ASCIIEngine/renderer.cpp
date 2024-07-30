@@ -1,4 +1,6 @@
 #include "renderer.h"
+#include "character_set.h"
+#include <iostream>
 
 Renderer::Renderer(Rect* draw_rect, uint8_t border_width) {
 
@@ -431,6 +433,33 @@ void* Renderer::getMemoryLocation(int panel, Point2d p) {
 	return cursorMemoryLocation;
 }
 
+std::vector<uint8_t> Renderer::getCharacterBitmap(float brightness) {
+	int index;
+	try {
+		index = static_cast<int>((1 - brightness) * (BRIGHTNESS_SCALE.length() - 1));
+		if (brightness < 0 || brightness > 1) {
+			throw std::invalid_argument("Brightness value must be in the range of 0 to 1!");
+		}
+	}
+	catch (std::string e) {
+		std::cout << e << std::endl;
+	}
+	char c = BRIGHTNESS_SCALE[index];
+	return getCharacterBitmap(c);
+}
+
+uint8_t Renderer::getCharacterTileWidth() {
+	return TILE_WIDTH;
+}
+
+uint8_t Renderer::getCharacterTileHeight() {
+	return TILE_HEIGHT;
+}
+
+std::vector<uint8_t> Renderer::getCharacterBitmap(char c) {
+	return byteArray.find(c)->second;
+}
+
 uint16_t Renderer::validate(const Point2d& p, uint32_t bounds[], int panel) {
 	uint16_t result = 0b0;
 	if (bounds[0] == UINT32_MAX) { // check first element to see if array is unassigned
@@ -559,41 +588,25 @@ Rect Renderer::clipRect(const Rect & r, const uint32_t bounds[], const uint16_t 
 	return Rect(Point2d(dimensions[0], dimensions[1]), Point2d(dimensions[2], dimensions[3]));
 }
 
-//uint32_t Renderer::calculateClippedY(const Point2d& p1, const Point2d& p2, const uint32_t boundX) {
-//
-//	int32_t dx = (p2.x - p1.x);
-//	int32_t dy = (p2.y - p1.y);
-//
-//	double m = static_cast<double>(dy) / dx;
-//	double b = p1.y - m * p1.x;
-//	double D = m * boundX + b;
-//	int32_t Y;
-//	if (D - (int)D > 0.5) {
-//		Y = static_cast<int32_t>(D + 1);
-//	} else {
-//		Y = static_cast<int32_t>(D);
-//	}
-//
-//	return Y;
-//}
-//
-//uint32_t Renderer::calculateClippedX(const Point2d& p1, const Point2d& p2, uint32_t boundY) {
-//	int32_t dx = (p2.x - p1.x);
-//	int32_t dy = (p2.y - p1.y);
-//
-//	double m = static_cast<double>(dy) / dx;
-//	double b = p1.y - m * p1.x;
-//	double D = (boundY - b) / m;
-//
-//	int32_t X;
-//	if (D - (int)D > 0.5) {
-//		X = static_cast<int32_t>(D + 1);
-//	} else {
-//		X = static_cast<int32_t>(D);
-//	}
-//
-//	return X;
-//}
+void Renderer::updateRenderArea() {
+	int horizontalCount = draw_area_.panels[FIRST_PERSON].getWidth() / TILE_WIDTH;
+	int verticalCount = draw_area_.panels[FIRST_PERSON].getHeight() / TILE_HEIGHT;
+	std::vector<uint8_t> character = getCharacterBitmap(1.0f);
+	for (int j = 0; j < verticalCount; j++) {
+		for (int i = 0; i < horizontalCount; i++) {
+			updateRenderArea(character, draw_area_.panels[FIRST_PERSON].lt.x + TILE_WIDTH * i, draw_area_.panels[FIRST_PERSON].lt.y + TILE_HEIGHT * j);
+		}
+	}
+	draw_area_.update = true;
+}
+
+void Renderer::updateRenderArea(std::vector<uint8_t> character, uint32_t x, uint32_t y) {
+	for (int j = 0; j < TILE_HEIGHT; j++) {
+		for (int i = 0; i < TILE_WIDTH; i++) {
+			updateRenderArea(Point2d(x + i, y + j), FIRST_PERSON, (character.at(j) >> i) & 1 ? 0xff0000 : 0x0);
+		}
+	}
+}
 
 void Renderer::clampDimension(uint32_t& dim, const uint32_t lower, const uint32_t upper, const uint32_t screenDim) {
 	if (dim < lower || dim > screenDim) {

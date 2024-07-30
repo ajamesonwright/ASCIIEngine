@@ -76,6 +76,7 @@ public:
 		}
 	};
 
+	const std::string BRIGHTNESS_SCALE = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'.";
 	const uint32_t colours[3][2] = { { 0x0, 0x111111}, { 0x0, 0x111133 }, { 0x444444, 0x444444 } };
 
 	Renderer(Rect* draw_rect, uint8_t border_width_);
@@ -86,6 +87,8 @@ public:
 	uint16_t validate(Geometry* g, uint32_t bounds[], int panel = -1);
 	Line clipLine(const Line& l, const uint32_t bounds[], const uint16_t& clipType, int panel);
 	Rect clipRect(const Rect& r, const uint32_t bounds[], const uint16_t& clipType, int panel);
+	void updateRenderArea();
+	void updateRenderArea(std::vector<uint8_t> character, uint32_t x, uint32_t y);
 	void updateRenderArea(const Point2d& p, int panel, uint32_t colour = 0xFF0000, bool valid = false);
 	void updateRenderArea(const Camera& c, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
 	void updateRenderArea(Geometry* g, int panel, uint32_t colour = 0xFFFFFF, bool valid = false);
@@ -105,8 +108,14 @@ public:
 
 	void* getMemoryLocation(int panel, Point2d p);
 
+	std::vector<uint8_t> getCharacterBitmap(float brightness);
+	uint8_t getCharacterTileWidth();
+	uint8_t getCharacterTileHeight();
+
 private:
 	DrawArea draw_area_;
+
+	std::vector<uint8_t> getCharacterBitmap(char c);
 
 	uint16_t validate(const Point2d& p, uint32_t bounds[], int panel = -1);
 	uint16_t validate(const Line& l, uint32_t bounds[], int panel = -1);
