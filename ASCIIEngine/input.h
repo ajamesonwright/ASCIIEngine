@@ -30,7 +30,7 @@ public:
 		camera = p_camera;
 	}
 
-	ButtonState input_state[KEY_SIZE];
+	ButtonState inputState[KEY_SIZE];
 
 	void clearInput(bool clear_held = true, bool clear_update = true, int key = -1);
 	void setInput(MSG* msg, bool is_held);

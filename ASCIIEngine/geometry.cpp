@@ -628,10 +628,10 @@ void Camera::update() {
 	double siny = sin(direction * M_PI / 180);
 	base = Point2d((uint32_t)(x - size * cosx / 2 + 0.5), (uint32_t)(y - size * siny / 2 + 0.5));
 	tip = Point2d((uint32_t)(x + size * cosx / 2 + 0.5), (uint32_t)(y + size * siny / 2 + 0.5));
-	double arrow_point_length = (size / 2) * sin((fov / 2) * M_PI / 180);
+	double arrowPointLength = (size / 2) * sin((fov / 2) * M_PI / 180);
 
-	left = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5));
-	right = Point2d((uint32_t)(tip.x + (-arrow_point_length * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrow_point_length * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
+	left = Point2d((uint32_t)(tip.x + (-arrowPointLength * cos((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrowPointLength * sin((direction + (90 - fov / 2)) * M_PI / 180)) + 0.5));
+	right = Point2d((uint32_t)(tip.x + (-arrowPointLength * cos((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5), (uint32_t)(tip.y + (-arrowPointLength * sin((direction - (90 - fov / 2)) * M_PI / 180)) + 0.5));
 
 	// Maintain bounding box for collisions
 	boundingBox[0] = Point2d(static_cast<uint32_t>(x + c2C * cos((direction - (90 + theta)) * M_PI / 180) + 0.5), static_cast<uint32_t>(y + c2C * sin((direction - (90 + theta)) * M_PI / 180) + 0.5));
@@ -654,10 +654,22 @@ void Camera::clampDirection() {
 }
 
 void Camera::clampPosition(Rect panel) {
-	if ((px - size / 2) < panel.lt.x) (px = (float)panel.lt.x + size / 2);
-	if ((py - size / 2) < panel.lt.y) (py = (float)panel.lt.y + size / 2);
-	if ((px + size / 2) > panel.rb.x) (px = (float)panel.rb.x - size / 2);
-	if ((py + size / 2) > panel.rb.y) (py = (float)panel.rb.y - size / 2);
+	if ((px - size / 2) < panel.lt.x) {
+		px = (float)panel.lt.x + size / 2;
+		vx = 0.0f;
+	} 
+	if ((py - size / 2) < panel.lt.y) {
+		py = (float)panel.lt.y + size / 2;
+		vy = 0.0f;
+	}
+	if ((px + size / 2) > panel.rb.x) {
+		px = (float)panel.rb.x - size / 2;
+		vy = 0.0f;
+	}
+	if ((py + size / 2) > panel.rb.y) {
+		py = (float)panel.rb.y - size / 2;
+		vy = 0.0f;
+	}
 }
 
 void Camera::clampPosition(const Line& l, const Point2d collision) {
@@ -675,28 +687,29 @@ void Camera::clampPosition(const Line& l, const Point2d collision) {
 }
 
 void Camera::clampVelocity() {
-	float limit = 100.0f;
-	if (vx > limit)
-		vx = limit;
-	if (vy > limit)
-		vy = limit;
-	if (vx < -limit)
-		vx = -limit;
-	if (vy < -limit)
-		vy = -limit;
+	double totalVelocity = sqrt(vx * vx + vy * vy);
+	if (totalVelocity > velocityLimit) {
+		double angle = direction * M_PI / 180;
+		vx = velocityLimit * cos(angle);
+		vy = velocityLimit * sin(angle);
+	} // current buggy when moving backwards
 }
 void Camera::clampAcceleration() {
-	float limit = 2000.0f;
-	if (ax > limit) ax = limit;
-	if (ay > limit) ay = limit;
-	if (ax < -limit) ax = -limit;
-	if (ay < -limit) ay = -limit;
+	double totalAcceleration = sqrt(ax * ax + ay * ay);
+	if (totalAcceleration > accelerationLimit) {
+		ax = accelerationLimit * cos(direction * M_PI / 180);
+		ay = accelerationLimit * sin(direction * M_PI / 180);
+	}
 }
 
 void Camera::clampAngularAcceleration() {
 	float limit = 4000.0f;
-	if (aa > limit) aa = limit;
-	if (aa < -limit) aa = -limit;
+	if (aa > limit) {
+		aa = limit;
+	}
+	if (aa < -limit) {
+		aa = -limit;
+	}
 }
 
 void Camera::checkCollisionWith(Geometry* g, std::map<Point2d, std::vector<Line>>& collisions) {

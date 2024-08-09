@@ -71,7 +71,7 @@ namespace Debug {
 		void setPanelId(int panelId) { this->panelId = panelId; }
 		void setLockedPanel(int lockedPanel) { this->lockedPanel = lockedPanel; }
 		void setDrawMode(int drawMode) { this->drawMode = drawMode; }
-		void setFps(float fps) { this->fps = fps; }
+		void setFps(float fps) { this->fps = 1/fps; }
 		void setMsg(MSG* msg) { this->msg = msg; }
 		void setGeometry(Geometry* obj) { this->obj = obj; }
 		void setInput(Input* input) { this->input = input; }

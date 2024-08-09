@@ -21,7 +21,7 @@
 	0 - input detected
 	0 - mouse position
 */
-int print = 0b0100'0000'1001;
+int print = 0b0100'1010'1001;
 // storage for print flag to allow toggling
 int stored_print_flag = 0b0000'0000'0000;
 
@@ -141,7 +141,7 @@ void Debug::Print(Debug::DebugMessage* debugMsg) {
 		} break;
 		case FRAMES_PER_SECOND:
 		{
-			mp += plainTextCallingClasses[caller] + DTAB + plainTextDebugTypes[type] + TAB + " FPS = " + std::to_string(1.0f / debugMsg->getFps()) + "\n";
+			mp += plainTextCallingClasses[caller] + DTAB + plainTextDebugTypes[type] + TAB + " FPS = " + std::to_string(debugMsg->getFps()) + "\n";
 		} break;
 		case INPUT_STATUS:
 		{

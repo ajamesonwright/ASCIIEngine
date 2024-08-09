@@ -67,7 +67,7 @@ public:
 class Ray2d : public Point2d {
 
 public:
-	double direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis
+	double direction; // 0-360 degrees, 0 degrees aligned with positive x-axis, positive rotation moving towards positive y-axis (CW)
 
 	Ray2d() { x = 0; y = 0; direction = 0.0f; };
 	Ray2d(const Ray2d& source) { x = source.x; y = source.y; direction = source.direction; };
@@ -254,14 +254,19 @@ class Camera : public Ray2d {
 
 	// Visual representation in top down panel, using an arrow to depict position and direction
 public:
-	uint8_t size; // Length from center point to base or tip
+	uint8_t size; // Length from base to tip
 	int colour = 0xffffff;
 	double px, py, vx, vy, ax, ay, va, aa;
-	uint16_t turn_speed = 10000, move_speed = 1000;
+	
+	double turnSpeed = 4000.0f, moveSpeed = 2000.0f; // for 40fps
+	//uint16_t turnSpeed = 7.5 * 5000, moveSpeed = 7.5 * 2000; // for 300fps
+	double accelerationDamping = 0.75f, velocityDamping = 0.75f;
+	//double accelerationLimit = 2000.0f, velocityLimit = 100.0f;  // for 40fps
+	double accelerationLimit = 2000.0f, velocityLimit = 100.0f; // for 300fps 
 	Point2d left, right, tip, base;
 	Line leftSide, rightSide, front, back;
 	uint8_t fov = 60;
-	uint16_t height = 1800;
+	uint16_t height = 10;
 
 	Camera() { x = 0; y = 0; direction = 0.0f; size = 10; px = 0.0f; py = 0.0f; vx = 0.0f; vy = 0.0f; ax = 0.0f; ay = 0.0f; };
 	Camera(uint32_t p_x, uint32_t p_y, float p_direction);
@@ -278,13 +283,11 @@ public:
 
 	void checkCollisionWith(Geometry* g, std::map<Point2d, std::vector<Line>>& collisions);
 	void findIntersection(Line& l, std::map<Point2d, std::vector<Line>>& collisions);
-	/*void checkCollisionWith(Geometry* g, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);
-	void findIntersection(Line& l, std::vector<Point2d>& collisions, std::vector<Line>& interferingSides);*/
 
 private:
 	uint8_t xOffset = 5;
 	uint8_t yOffset = 10;
-	double theta = atan(yOffset / xOffset) * 180 / M_PI;                   // angle of hypotenuse of right angle triangle formed by xOffset and yOffset
+	double theta = atan(yOffset / xOffset) * 180 / M_PI;      // angle of hypotenuse of right angle triangle formed by xOffset and yOffset
 	double c2C = sqrt(xOffset * xOffset + yOffset * yOffset); // centre of camera to corner of bounding box
 	Point2d boundingBox[4]; // lb, lt, rt, rb
 };

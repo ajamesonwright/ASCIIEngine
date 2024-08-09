@@ -17,65 +17,65 @@ class Renderer;
 namespace MainWindow {
 
 	// execution state
-	int run_state_;
-	int draw_mode_;
+	int runState;
+	int drawMode;
 
 	// draw shape outline flag
 	int outlineType = 0;
 
 	// current mouseover panel
-	int current_panel_ = -1;
+	int currentPanel = -1;
 
-	Renderer* renderer_ = nullptr;
-	Input* input_ = nullptr;
+	Renderer* renderer = nullptr;
+	Input* input = nullptr;
 
 	// Window/exe properties
-	const uint16_t window_starting_height_ = 600;
-	const uint16_t window_starting_width_ = 1920;
-	const uint8_t window_starting_x_ = 100;
-	const uint8_t window_starting_y_ = 200;
-	const uint8_t border_width_ = 20;
-	uint16_t window_height_ = 600;								// current client area height
-	uint16_t window_width_ = 800;								// current client area width
-	uint16_t xPos_ = 100;										// window top left x
-	uint16_t yPos_ = 200;										// window top left y
-	uint8_t main_to_client_offset_x_ = 0;
-	uint8_t main_to_client_offset_y_ = 0;
+	const uint16_t windowStartingHeight = 600;
+	const uint16_t windowStartingWidth = 1920;
+	const uint8_t windowStartingX = 100;
+	const uint8_t windowStartingY = 200;
+	const uint8_t borderWidth = 20;
+	uint16_t windowHeight = 600;								// current client area height
+	uint16_t windowWidth = 800;								// current client area width
+	uint16_t xPos = 100;										// window top left x
+	uint16_t yPos = 200;										// window top left y
+	uint8_t mainToClientOffsetX = 0;
+	uint8_t mainToClientOffsetY = 0;
 
-	Rect main_rect, draw_rect;
-	Point2d geo_start, geo_end;
+	Rect mainRect, drawRect;
+	Point2d geoStart, geoEnd;
 	Line highlightLine;
 	Camera* camera;
 	std::vector<Geometry*> geometryQueue;
 	Quadtree* qt;
 
-	MSG event_message;
+	MSG eventMessage;
 
 	Renderer* getRenderer();
 	Rect* getDrawAreaPanel(int panel);
 
 	bool getRunningState();
-	void setRunningState(int p_run_state);
-	void setDrawMode(int p_draw_mode);
+	void setRunningState(int pRunState);
+	void setDrawMode(int pDrawMode);
 	int getCursorFocus(Point2d p);
 
 	void addGeometry(Geometry* g);
 	void removeGeometry(Geometry* g);
-	void simulateFrame(float s_per_frame);
+	void simulateFrame(float secondsPerFrame);
 
 	void* findMemoryHandle(Geometry* g);
 
-	void setWindowHeight(uint16_t p_height);
+	void setWindowHeight(uint16_t height);
 	uint16_t getWindowHeight();
-	void setWindowWidth(uint16_t p_width);
+	void setWindowWidth(uint16_t width);
 	uint16_t getWindowWidth();
-	void setWindowOffsetX(uint16_t p_offset);
+	void setWindowOffsetX(uint16_t offset);
 	uint16_t getWindowOffsetX();
-	void setWindowOffsetY(uint16_t p_offset);
+	void setWindowOffsetY(uint16_t offset);
 	uint16_t getWindowOffsetY();
-	void setMTCOffsetX(uint8_t p_offset_x);
+	void setMTCOffsetX(uint8_t offset);
 	uint8_t getMTCOffsetX();
-	void setMTCOffsetY(uint8_t p_offset_y);
+	void setMTCOffsetY(uint8_t offset);
 	uint8_t getMTCOffsetY();
 
 	Rect& getMainWindowRect();
@@ -87,6 +87,7 @@ namespace MainWindow {
 	void conditionMouseCoords(POINT& p);
 
 	bool canDrawHightlightLine();
+	void drawHighlightLine();
 };
 
 enum RunState {

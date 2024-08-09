@@ -10,9 +10,9 @@ void Input::clearInput(bool clear_held, bool clear_update, int key) {
 
 	for (int i = range_begin; i < range_end; i++) {
 		if (clear_held)
-			input_state[i].held = false;
+			inputState[i].held = false;
 		if (clear_update)
-			input_state[i].update = false;
+			inputState[i].update = false;
 	};
 }
 
@@ -24,8 +24,8 @@ void Input::setInput(MSG* msg, bool is_held) {
 		dbg.setMsg(msg);
 		Debug::Print(&dbg);
 
-		input_state[code].update = is_held != input_state[code].held;
-		input_state[code].held = is_held;
+		inputState[code].update = is_held != inputState[code].held;
+		inputState[code].held = is_held;
 	}
 }
 
@@ -33,37 +33,35 @@ bool Input::getInput(WPARAM wp) {
 	int code = vkToKey(wp);
 
 	if (code) {
-		return input_state[code].held;
+		return inputState[code].held;
 	}
 	return false;
 }
 
 bool Input::getInput(int key_code) {
-	return input_state[key_code].held;
+	return inputState[key_code].held;
 }
 
 void Input::handleInput(MSG* msg, float dt) {
 	Debug::DebugMessage dbg = Debug::DebugMessage(CallingClasses::INPUT_CLASS, DebugTypes::INPUT_STATUS);
 	Debug::Print(&dbg);
-	/*if (input_state[A_DOWN].held) camera->direction -= (camera->turn_speed * dt);
-	if (input_state[D_DOWN].held) camera->direction += (camera->turn_speed * dt);*/
 
-	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->move_speed;
-	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->move_speed;
+	double cosy = cos((camera->direction + 90) * M_PI / 180) * camera->moveSpeed;
+	double sinx = sin((camera->direction + 90) * M_PI / 180) * camera->moveSpeed;
 
-	if (input_state[W_DOWN].held) {
+	if (inputState[W_DOWN].held) {
 		camera->ay -= (float)cosy;
 		camera->ax += (float)sinx;
 	}
-	if (input_state[S_DOWN].held) {
+	if (inputState[S_DOWN].held) {
 		camera->ay += (float)cosy;
 		camera->ax -= (float)sinx;
 	}
-	if (input_state[A_DOWN].held) {
-		camera->aa -= (float)camera->turn_speed;// * dt;
+	if (inputState[A_DOWN].held) {
+		camera->aa -= (float)camera->turnSpeed;
 	}
-	if (input_state[D_DOWN].held) {
-		camera->aa += (float)camera->turn_speed;// *dt;
+	if (inputState[D_DOWN].held) {
+		camera->aa += (float)camera->turnSpeed;
 	}
 	//camera->clampDirection();
 }
